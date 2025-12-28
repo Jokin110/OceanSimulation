@@ -1,20 +1,20 @@
-#include "Application.h"
+#include "WindowApplication.h"
 #include <GLFW/glfw3.h>
 
 #include <iostream>
 #include <ratio>
 
-Application::Application(const std::string& title)
+WindowApplication::WindowApplication(const std::string& title)
 {
     _title = title;
 }
 
-Application::~Application()
+WindowApplication::~WindowApplication()
 {
     Cleanup();
 }
 
-void Application::Run()
+void WindowApplication::Run()
 {
     if (!Initialize())
     {
@@ -33,7 +33,7 @@ void Application::Run()
     }
 }
 
-void Application::Cleanup()
+void WindowApplication::Cleanup()
 {
     if (_window != nullptr)
     {
@@ -43,7 +43,7 @@ void Application::Cleanup()
     glfwTerminate();
 }
 
-bool Application::Initialize()
+bool WindowApplication::Initialize()
 {
     if (!glfwInit())
     {
@@ -79,34 +79,34 @@ bool Application::Initialize()
     return true;
 }
 
-void Application::OnResize(int32_t width, int32_t height)
+void WindowApplication::OnResize(int32_t width, int32_t height)
 {
     _width = width;
     _height = height;
 }
 
-void Application::HandleResize(GLFWwindow* window, int32_t width, int32_t height)
+void WindowApplication::HandleResize(GLFWwindow* window, int32_t width, int32_t height)
 {
-    Application* application = static_cast<Application*>(glfwGetWindowUserPointer(window));
+    WindowApplication* application = static_cast<WindowApplication*>(glfwGetWindowUserPointer(window));
 	application->OnResize(width, height);
 }
 
-GLFWwindow* Application::GetWindow() const
+GLFWwindow* WindowApplication::GetWindow() const
 {
     return _window;
 }
 
-int32_t Application::GetWindowWidth() const
+int32_t WindowApplication::GetWindowWidth() const
 {
     return _width;
 }
 
-int32_t Application::GetWindowHeight() const
+int32_t WindowApplication::GetWindowHeight() const
 {
     return _height;
 }
 
-void Application::Update()
+void WindowApplication::Update()
 {
 	auto oldTime = _currentTime;
 	_currentTime = std::chrono::high_resolution_clock::now();

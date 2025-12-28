@@ -6,11 +6,11 @@
 
 struct GLFWwindow;
 
-class Application
+class WindowApplication
 {
 public:
-    Application(const std::string& title);
-    virtual ~Application();
+    WindowApplication(const std::string& title);
+    virtual ~WindowApplication();
     void Run();
 
 protected:

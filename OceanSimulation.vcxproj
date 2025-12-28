@@ -19,13 +19,13 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\Application.h" />
-    <ClInclude Include="include\HelloD3D11Application.h" />
+    <ClInclude Include="include\WindowApplication.h" />
+    <ClInclude Include="include\D3D11Application.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="source\Application.cpp" />
-    <ClCompile Include="source\HelloD3D11Application.cpp" />
+    <ClCompile Include="source\WindowApplication.cpp" />
+    <ClCompile Include="source\D3D11Application.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="assets\Main.ps.hlsl">
