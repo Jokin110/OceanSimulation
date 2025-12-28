@@ -6,7 +6,7 @@
 
 WindowApplication::WindowApplication(const std::string& title)
 {
-    _title = title;
+    m_Title = title;
 }
 
 WindowApplication::~WindowApplication()
@@ -26,7 +26,7 @@ void WindowApplication::Run()
         return;
 	}
 
-    while (!glfwWindowShouldClose(_window))
+    while (!glfwWindowShouldClose(m_Window))
     {
         Update();
         Render();
@@ -35,10 +35,10 @@ void WindowApplication::Run()
 
 void WindowApplication::Cleanup()
 {
-    if (_window != nullptr)
+    if (m_Window != nullptr)
     {
-        glfwDestroyWindow(_window);
-        _window = nullptr;
+        glfwDestroyWindow(m_Window);
+        m_Window = nullptr;
     }
     glfwTerminate();
 }
@@ -53,36 +53,38 @@ bool WindowApplication::Initialize()
 
     GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* videoMode = glfwGetVideoMode(primaryMonitor);
-    _width = static_cast<int32_t>(videoMode->width * 0.9f);
-    _height = static_cast<int32_t>(videoMode->height * 0.9f);
+    m_Width = static_cast<int32_t>(videoMode->width * 0.9f);
+    m_Height = static_cast<int32_t>(videoMode->height * 0.9f);
 
     glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_FALSE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    _window = glfwCreateWindow(_width, _height, _title.data(), nullptr, nullptr);
+    m_Window = glfwCreateWindow(m_Width, m_Height, m_Title.data(), nullptr, nullptr);
 
-    if (_window == nullptr)
+    if (m_Window == nullptr)
     {
         std::cerr << "GLFW: Unable to create window\n";
         Cleanup();
         return false;
     }
 
-    const int32_t windowLeft = videoMode->width / 2 - _width / 2;
-    const int32_t windowTop = videoMode->height / 2 - _height / 2;
-    glfwSetWindowPos(_window, windowLeft, windowTop);
+    const int32_t windowLeft = videoMode->width / 2 - m_Width / 2;
+    const int32_t windowTop = videoMode->height / 2 - m_Height / 2;
+    glfwSetWindowPos(m_Window, windowLeft, windowTop);
 
-	glfwSetWindowUserPointer(_window, this);
-	glfwSetFramebufferSizeCallback(_window, HandleResize);
+	glfwSetWindowUserPointer(m_Window, this);
+	glfwSetFramebufferSizeCallback(m_Window, HandleResize);
 
-	_currentTime = std::chrono::high_resolution_clock::now();
+	m_CurrentTime = std::chrono::high_resolution_clock::now();
+
+    m_Time = 0.0f;
 
     return true;
 }
 
 void WindowApplication::OnResize(int32_t width, int32_t height)
 {
-    _width = width;
-    _height = height;
+    m_Width = width;
+    m_Height = height;
 }
 
 void WindowApplication::HandleResize(GLFWwindow* window, int32_t width, int32_t height)
@@ -93,25 +95,28 @@ void WindowApplication::HandleResize(GLFWwindow* window, int32_t width, int32_t 
 
 GLFWwindow* WindowApplication::GetWindow() const
 {
-    return _window;
+    return m_Window;
 }
 
 int32_t WindowApplication::GetWindowWidth() const
 {
-    return _width;
+    return m_Width;
 }
 
 int32_t WindowApplication::GetWindowHeight() const
 {
-    return _height;
+    return m_Height;
 }
 
 void WindowApplication::Update()
 {
-	auto oldTime = _currentTime;
-	_currentTime = std::chrono::high_resolution_clock::now();
+	auto oldTime = m_CurrentTime;
+	m_CurrentTime = std::chrono::high_resolution_clock::now();
 
-	std::chrono::duration<double, std::milli> timeSpan = (_currentTime - oldTime);
-    _deltaTime = static_cast<float>(timeSpan.count() / 1000.0);
+	std::chrono::duration<double, std::milli> timeSpan = (m_CurrentTime - oldTime);
+    m_DeltaTime = static_cast<float>(timeSpan.count() / 1000.0);
+
+	m_Time += m_DeltaTime;
+
     glfwPollEvents();
 }

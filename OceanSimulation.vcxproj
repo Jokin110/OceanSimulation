@@ -28,11 +28,11 @@
     <ClCompile Include="source\D3D11Application.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="assets\Main.ps.hlsl">
+    <FxCompile Include="assets\shaders\Main.ps.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
     </FxCompile>
-    <FxCompile Include="assets\Main.vs.hlsl">
+    <FxCompile Include="assets\shaders\Main.vs.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
@@ -131,6 +131,7 @@
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
+      <EntryPointName>Main</EntryPointName>
     </FxCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -151,6 +152,7 @@
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
+      <EntryPointName>Main</EntryPointName>
     </FxCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

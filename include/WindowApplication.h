@@ -27,12 +27,13 @@ protected:
     [[nodiscard]] int32_t GetWindowWidth() const;
     [[nodiscard]] int32_t GetWindowHeight() const;
 
-    int32_t _width = 0;
-	int32_t _height = 0;
-    float _deltaTime = 0.016f;
+    int32_t m_Width = 0;
+	int32_t m_Height = 0;
+    float m_Time = 0.0f;
+    float m_DeltaTime = 0.016f;
 
 private:
-	std::chrono::high_resolution_clock::time_point _currentTime;
-    GLFWwindow* _window = nullptr;
-    std::string _title;
+	std::chrono::high_resolution_clock::time_point m_CurrentTime;
+    GLFWwindow* m_Window = nullptr;
+    std::string m_Title;
 };

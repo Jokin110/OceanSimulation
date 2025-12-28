@@ -32,10 +32,10 @@
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="assets\Main.ps.hlsl">
+    <FxCompile Include="assets\shaders\Main.ps.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
-    <FxCompile Include="assets\Main.vs.hlsl">
+    <FxCompile Include="assets\shaders\Main.vs.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
   </ItemGroup>

@@ -15,6 +15,8 @@
 
 #include "WindowApplication.h"
 
+#include <vector>
+
 class D3D11Application final : public WindowApplication
 {
     template <typename T>
@@ -79,4 +81,6 @@ private:
 		ComPtr<ID3DBlob>& vertexShaderBlob) const;
 
 	[[nodiscard]] ComPtr<ID3D11PixelShader> CreatePixelShader(const std::wstring& fileName) const;
+
+	void GeneratePlaneMesh();
 };

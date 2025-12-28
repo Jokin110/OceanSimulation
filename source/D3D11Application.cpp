@@ -7,13 +7,9 @@
 #include <iostream>
 
 using namespace DirectX;
+using std::vector;
 
-template <UINT TDebugNameLength>
-inline void SetDebugName(_In_ ID3D11DeviceChild* deviceResource, _In_z_ const char(&debugName)[TDebugNameLength])
-{
-    deviceResource->SetPrivateData(WKPDID_D3DDebugObjectName, TDebugNameLength - 1, debugName);
-}
-
+// Define the vertex data structure
 struct VertexData
 {
     XMFLOAT3 position;
@@ -21,6 +17,8 @@ struct VertexData
     XMFLOAT3 color;
 };
 
+/*
+// Define the vertices of the mesh
 VertexData m_Vertices[4] =
 {
     { XMFLOAT3(-1.0f, 0.0f,  -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT3(0.0f, 0.0f, 1.0f) }, // 0
@@ -29,17 +27,25 @@ VertexData m_Vertices[4] =
     { XMFLOAT3(1.0f, 0.0f,  -1.0f), XMFLOAT3(0.0f, 1.0f, 0.0f), XMFLOAT3(1.0f, 0.0f, 1.0f) }, // 3
 };
 
+// Define the indices of the mesh
 int m_Indices[6] =
 {
     0, 1, 2,
     0, 2, 3
 };
+*/
 
+vector<VertexData> m_Vertices;
+vector<int> m_Indices;
+
+// Define the structure of the constant buffers for the vertex shader
 struct PerObjectConstantBufferData
 {
-    XMMATRIX WorldMatrix;
-	XMMATRIX InverseTransposeWorldMatrix;
-    XMMATRIX WorldViewProjectionMatrix;
+    XMMATRIX m_WorldMatrix;
+	XMMATRIX m_InverseTransposeWorldMatrix;
+    XMMATRIX m_ViewProjectionMatrix;
+	float m_Time;
+	XMFLOAT3 m_CameraPosition;
 };
 
 D3D11Application::D3D11Application(const std::string& title)
@@ -117,10 +123,6 @@ bool D3D11Application::Initialize()
 #endif
     
     m_d3dDeviceContext = deviceContext;
-
-    constexpr char deviceName[] = "DEV_Main";
-    m_d3dDevice->SetPrivateData(WKPDID_D3DDebugObjectName, sizeof(deviceName), deviceName);
-    SetDebugName(m_d3dDeviceContext.Get(), "CTX_Main");
 
 	DXGI_SWAP_CHAIN_DESC1 swapChainDescriptor = {};
     swapChainDescriptor.Width = GetWindowWidth();
@@ -321,16 +323,16 @@ bool D3D11Application::Load()
         return false;
     }
 
-	vertexShaderBlob.Reset();
+    GeneratePlaneMesh();
 
     D3D11_BUFFER_DESC vertexBufferDesc = {};
     vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    vertexBufferDesc.ByteWidth = sizeof(m_Vertices);
+    vertexBufferDesc.ByteWidth = static_cast<UINT>(sizeof(VertexData) * m_Vertices.size());
 	vertexBufferDesc.CPUAccessFlags = 0;
     vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 
     D3D11_SUBRESOURCE_DATA resourceData = {};
-    resourceData.pSysMem = m_Vertices;
+    resourceData.pSysMem = m_Vertices.data();
 
     if (FAILED(m_d3dDevice->CreateBuffer(
         &vertexBufferDesc,
@@ -344,10 +346,10 @@ bool D3D11Application::Load()
 	D3D11_BUFFER_DESC indexBufferDesc = {};
 
 	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	indexBufferDesc.ByteWidth = sizeof(m_Indices);
+	indexBufferDesc.ByteWidth = static_cast<UINT>(sizeof(int) * m_Indices.size());
 	indexBufferDesc.CPUAccessFlags = 0;
 	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	resourceData.pSysMem = m_Indices;
+	resourceData.pSysMem = m_Indices.data();
 
     if (FAILED(m_d3dDevice->CreateBuffer(
         &indexBufferDesc,
@@ -432,7 +434,7 @@ void D3D11Application::Update()
 {
     WindowApplication::Update();
 
-	XMVECTOR eyePosition = XMVectorSet(0.0f, 2.0f, -5.0f, 1.0f);
+	XMVECTOR eyePosition = XMVectorSet(0.0f, 5.0f, -20.0f, 1.0f);
 	XMVECTOR focusPosition = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
 	XMVECTOR upDirection = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
@@ -441,13 +443,15 @@ void D3D11Application::Update()
         XMConvertToRadians(45.0f),
         static_cast<float>(GetWindowWidth()) / static_cast<float>(GetWindowHeight()),
         0.1f,
-		100.0f);
+		1000.0f);
 	XMMATRIX worldMatrix = XMMatrixIdentity();
 
 	PerObjectConstantBufferData constantBufferData = {};
-    constantBufferData.WorldMatrix = worldMatrix;
-	constantBufferData.InverseTransposeWorldMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, worldMatrix));
-    constantBufferData.WorldViewProjectionMatrix = worldMatrix * viewMatrix * projectionMatrix;
+    constantBufferData.m_WorldMatrix = worldMatrix;
+	constantBufferData.m_InverseTransposeWorldMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, worldMatrix));
+    constantBufferData.m_ViewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
+    constantBufferData.m_Time = m_Time;
+	constantBufferData.m_CameraPosition = XMFLOAT3(0.0f, 5.0f, -20.0f);
 
     m_d3dDeviceContext->UpdateSubresource(
         m_d3dConstantBuffers.Get(),
@@ -464,7 +468,7 @@ void D3D11Application::Render()
     constexpr UINT vertexStride = sizeof(VertexData);
     constexpr UINT vertexOffset = 0;
 
-	ClearScreen(clearColor, 1.0f, 0);
+	ClearScreen(Colors::SkyBlue, 1.0f, 0);
 
     m_d3dDeviceContext->IASetInputLayout(m_d3dInputLayout.Get());
 
@@ -474,6 +478,11 @@ void D3D11Application::Render()
         m_d3dVertexBuffer.GetAddressOf(),
         &vertexStride,
         &vertexOffset);
+
+    m_d3dDeviceContext->IASetIndexBuffer(
+        m_d3dIndexBuffer.Get(),
+        DXGI_FORMAT::DXGI_FORMAT_R32_UINT,
+		0);
 
     m_d3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -488,7 +497,7 @@ void D3D11Application::Render()
     m_d3dDeviceContext->OMSetRenderTargets(1, m_d3dRenderTargetView.GetAddressOf(), m_d3dDepthStencilView.Get());
 	m_d3dDeviceContext->OMSetDepthStencilState(m_d3dDepthStencilState.Get(), 1);
 
-    m_d3dDeviceContext->DrawIndexed(_countof(m_Indices), 0, 0);
+    m_d3dDeviceContext->DrawIndexed(static_cast<UINT>(m_Indices.size()), 0, 0);
 
     Present(true);
 }
@@ -577,4 +586,55 @@ D3D11Application::ComPtr<ID3D11PixelShader> D3D11Application::CreatePixelShader(
     }
 
     return pixelShader;
+}
+
+void D3D11Application::GeneratePlaneMesh()
+{
+	m_Vertices.clear();
+	m_Indices.clear();
+
+    int widthVertices = 1024;
+	int depthVertices = 1024;
+
+    float separation = 0.1f;
+
+	float startX = -((widthVertices - 1) * separation) / 2.0f;
+    float startZ = -((depthVertices - 1) * separation) / 2.0f;
+
+    for (int x = 0; x < widthVertices; x++)
+    {
+        for (int z = 0; z < depthVertices; z++)
+        {
+            VertexData vertex = VertexData {};
+
+			vertex.position.x = startX + x * separation;
+            vertex.position.y = 0.0f;
+			vertex.position.z = startZ + z * separation;
+
+			vertex.normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
+
+			vertex.color = XMFLOAT3(0.0f, 0.41f, 0.58f);
+
+			m_Vertices.push_back(vertex);
+        }
+    }
+
+    for (int x = 0; x < widthVertices - 1; x++)
+    {
+        for (int z = 0; z < depthVertices - 1; z++)
+        {
+            int bottomLeftVertex = x * depthVertices + z;
+            int bottomRightVertex = (x + 1) * depthVertices + z;
+			int topLeftVertex = bottomLeftVertex + 1;
+            int topRightVertex = bottomRightVertex + 1;
+
+            m_Indices.push_back(bottomLeftVertex);
+            m_Indices.push_back(topLeftVertex);
+            m_Indices.push_back(topRightVertex);
+
+			m_Indices.push_back(bottomLeftVertex);
+            m_Indices.push_back(topRightVertex);
+			m_Indices.push_back(bottomRightVertex);
+        }
+    }
 }
