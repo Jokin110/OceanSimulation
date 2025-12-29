@@ -48,6 +48,9 @@ struct PerObjectConstantBufferData
 	XMFLOAT3 m_CameraPosition;
 };
 
+XMFLOAT3 m_CameraPosition = XMFLOAT3(0.0f, 5.0f, -20.0f);
+XMFLOAT3 m_CameraFocusPoint = XMFLOAT3(0.0f, 0.0f, 0.0f);
+
 D3D11Application::D3D11Application(const std::string& title)
     : WindowApplication(title)
 {
@@ -434,8 +437,36 @@ void D3D11Application::Update()
 {
     WindowApplication::Update();
 
-	XMVECTOR eyePosition = XMVectorSet(0.0f, 5.0f, -20.0f, 1.0f);
-	XMVECTOR focusPosition = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+    float cameraSpeed = 5.0f;
+
+	XMFLOAT3 cameraForward = XMFLOAT3(m_CameraFocusPoint.x - m_CameraPosition.x, 0, m_CameraFocusPoint.z - m_CameraPosition.z);
+    float length = sqrtf(cameraForward.x * cameraForward.x + cameraForward.y * cameraForward.y + cameraForward.z * cameraForward.z);
+    cameraForward = XMFLOAT3(cameraForward.x / length, 0, cameraForward.z / length);
+	XMFLOAT3 cameraRight = XMFLOAT3(cameraForward.z, 0, -cameraForward.x);
+
+    if (glfwGetKey(GetWindow(), GLFW_KEY_W) == GLFW_PRESS)
+    {
+        m_CameraPosition.x += cameraSpeed * m_DeltaTime * cameraForward.x;
+        m_CameraPosition.z += cameraSpeed * m_DeltaTime * cameraForward.z;
+    }
+	if (glfwGetKey(GetWindow(), GLFW_KEY_S) == GLFW_PRESS)
+    {
+        m_CameraPosition.x -= cameraSpeed * m_DeltaTime * cameraForward.x;
+        m_CameraPosition.z -= cameraSpeed * m_DeltaTime * cameraForward.z;
+    }
+    if (glfwGetKey(GetWindow(), GLFW_KEY_A) == GLFW_PRESS)
+    {
+        m_CameraPosition.x -= cameraSpeed * m_DeltaTime * cameraRight.x;
+        m_CameraPosition.z -= cameraSpeed * m_DeltaTime * cameraRight.z;
+    }
+    if (glfwGetKey(GetWindow(), GLFW_KEY_D) == GLFW_PRESS)
+    {
+        m_CameraPosition.x += cameraSpeed * m_DeltaTime * cameraRight.x;
+        m_CameraPosition.z += cameraSpeed * m_DeltaTime * cameraRight.z;
+    }
+
+	XMVECTOR eyePosition = XMLoadFloat3(&m_CameraPosition);
+	XMVECTOR focusPosition = XMVectorSet(m_CameraFocusPoint.x, m_CameraFocusPoint.y, m_CameraFocusPoint.z, 1.0f);
 	XMVECTOR upDirection = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 
 	XMMATRIX viewMatrix = XMMatrixLookAtLH(eyePosition, focusPosition, upDirection);
@@ -451,7 +482,7 @@ void D3D11Application::Update()
 	constantBufferData.m_InverseTransposeWorldMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, worldMatrix));
     constantBufferData.m_ViewProjectionMatrix = XMMatrixMultiply(viewMatrix, projectionMatrix);
     constantBufferData.m_Time = m_Time;
-	constantBufferData.m_CameraPosition = XMFLOAT3(0.0f, 5.0f, -20.0f);
+	constantBufferData.m_CameraPosition = m_CameraPosition;
 
     m_d3dDeviceContext->UpdateSubresource(
         m_d3dConstantBuffers.Get(),
