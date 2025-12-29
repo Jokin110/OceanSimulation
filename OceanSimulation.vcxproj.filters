@@ -32,10 +32,13 @@
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="assets\shaders\Main.ps.hlsl">
+    <FxCompile Include="assets\shaders\PixelShader.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\Main.vs.hlsl">
+    <FxCompile Include="assets\shaders\SumOfSinesVS.hlsl">
+      <Filter>Resource Files</Filter>
+    </FxCompile>
+    <FxCompile Include="assets\shaders\GerstnerWavesVS.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
   </ItemGroup>

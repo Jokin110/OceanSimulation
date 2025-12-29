@@ -48,7 +48,7 @@ struct PerObjectConstantBufferData
 	XMFLOAT3 m_CameraPosition;
 };
 
-XMFLOAT3 m_CameraPosition = XMFLOAT3(0.0f, 5.0f, -20.0f);
+XMFLOAT3 m_CameraPosition = XMFLOAT3(0.0f, 15.0f, -20.0f);
 XMFLOAT3 m_CameraFocusPoint = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 D3D11Application::D3D11Application(const std::string& title)
@@ -270,14 +270,22 @@ bool D3D11Application::CreateDepthStencilResources()
 bool D3D11Application::Load()
 {
     ComPtr<ID3DBlob> vertexShaderBlob = nullptr;
-    m_d3dVertexShader = CreateVertexShader(L"assets/shaders/Main.vs.hlsl", vertexShaderBlob);
+#if _DEBUG
+    m_d3dVertexShader = CreateVertexShader(L"assets/shaders/GerstnerWavesVS.hlsl", vertexShaderBlob);
+#else
+	m_d3dVertexShader = CreateVertexShader(L"../../assets/shaders/SumOfSinesVS.hlsl", vertexShaderBlob);
+#endif
 
     if (m_d3dVertexShader == nullptr)
     {
         return false;
     }
 
-    m_d3dPixelShader = CreatePixelShader(L"assets/shaders/Main.ps.hlsl");
+#if _DEBUG
+    m_d3dPixelShader = CreatePixelShader(L"assets/shaders/PixelShader.hlsl");
+#else
+	m_d3dPixelShader = CreatePixelShader(L"../../assets/shaders/PixelShader.hlsl");
+#endif
 
     if (m_d3dPixelShader == nullptr)
     {
