@@ -1,4 +1,6 @@
 
+#define PI 3.14159265359
+
 cbuffer PerObjectBuffer : register(b0)
 {
     row_major matrix m_WorldMatrix;
@@ -21,9 +23,43 @@ struct VSOutput
     float3 worldPosition : TEXCOORD0;
     float3 normalWS : TEXCOORD1;
     float3 viewVector : TEXCOORD2;
+    float3 eyePos : TEXCOORD3;
+    float jacobian : JACOBIAN;
     float3 color : COLOR;
     float4 position : SV_POSITION;
 };
+
+struct WavesResults
+{
+    float height;
+    float dx;
+    float dz;
+};
+
+WavesResults CalculateWavePosition(float3 worldPosition)
+{
+    WavesResults results = (WavesResults) 0;
+    
+    float2 initialDirection = normalize(float2(1.0, 0.5));
+    float initialAmplitude = 0.5;
+    float initialFrequency = 0.3;
+    float initialSpeed = 4;
+    
+    for (int i = 0; i < 32; i++)
+    {
+        float2 direction = normalize(float2(cos(PI / 4.0 * (i + 1) - PI / 3.0), sin(PI / 4.0 * (i + 1) - PI / 3.0)));
+        float amplitude = initialAmplitude * pow(0.7, i);
+        float frequency = initialFrequency * pow(1.18, i);
+        float speed = initialSpeed * frequency;
+        
+        results.height += amplitude * sin(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
+    
+        results.dx += amplitude * direction.x * frequency * cos(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
+        results.dz += amplitude * direction.y * frequency * cos(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
+    }
+
+    return results;
+}
 
 VSOutput Main(VSInput input)
 {
@@ -31,57 +67,17 @@ VSOutput Main(VSInput input)
     
     float3 worldPosition = mul(float4(input.position, 1.0), m_WorldMatrix).xyz;
     
-    // Wave 1
-    float amplitude = 0.5f;
-    float2 direction = normalize(float2(1.0, 0.1)); 
-    float frequency = 0.3f; 
-    float speed = 0.5f; 
-
-    float height = amplitude * sin(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
+    WavesResults results = CalculateWavePosition(worldPosition);
     
-    float dx = amplitude * direction.x * frequency * cos(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
-    float dz = amplitude * direction.y * frequency * cos(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
-
-    // Wave 2
-    amplitude = 0.25f;
-    direction = normalize(float2(0.7, 0.7));
-    frequency = 0.65f;
-    speed = 1.0f;
-
-    height += amplitude * sin(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
+    worldPosition.y += results.height;
     
-    dx += amplitude * direction.x * frequency * cos(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
-    dz += amplitude * direction.y * frequency * cos(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
-
-    //  Wave 3
-    amplitude = 0.12f;
-    direction = normalize(float2(-0.2, 0.9));
-    frequency = 1.8f;
-    speed = 1.8f;
-
-    height += amplitude * sin(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
-    
-    dx += amplitude * direction.x * frequency * cos(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
-    dz += amplitude * direction.y * frequency * cos(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
-
-    // Wave 4
-    amplitude = 0.04f;
-    direction = normalize(float2(0.4, -0.6));
-    frequency = 4.5f;
-    speed = 2.4f;
-    
-    height += amplitude * sin(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
-    
-    dx += amplitude * direction.x * frequency * cos(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
-    dz += amplitude * direction.y * frequency * cos(dot(direction, worldPosition.xz) * frequency + m_Time * speed);
-    
-    worldPosition.y += height;
-    
-    float3 normal = normalize(float3(-dx, 1.0f, -dz));
+    float3 normal = normalize(float3(-results.dx, 1.0f, -results.dz));
     
     output.worldPosition = worldPosition;
-    output.normalWS = normalize(mul(float4(normal, 0.0), m_InverseTransposeWorldMatrix).xyz);
-    output.viewVector = normalize(m_CameraPosition - worldPosition);
+    output.normalWS = normal;
+    output.viewVector = m_CameraPosition - worldPosition;
+    output.eyePos = m_CameraPosition;
+    output.jacobian = 1;
     output.color = input.color;
     output.position = mul(float4(worldPosition, 1.0), m_ViewProjectionMatrix);
     

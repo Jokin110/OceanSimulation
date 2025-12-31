@@ -31,6 +31,7 @@ protected:
 	int32_t m_Height = 0;
     float m_Time = 0.0f;
     float m_DeltaTime = 0.016f;
+    float m_TimeScale = 1.0f;
 
 private:
 	std::chrono::high_resolution_clock::time_point m_CurrentTime;

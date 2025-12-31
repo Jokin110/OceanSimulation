@@ -116,7 +116,7 @@ void WindowApplication::Update()
 	std::chrono::duration<double, std::milli> timeSpan = (m_CurrentTime - oldTime);
     m_DeltaTime = static_cast<float>(timeSpan.count() / 1000.0);
 
-	m_Time += m_DeltaTime;
+	m_Time += m_DeltaTime * m_TimeScale;
 
     glfwPollEvents();
 }

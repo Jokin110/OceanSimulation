@@ -473,6 +473,15 @@ void D3D11Application::Update()
         m_CameraPosition.z += cameraSpeed * m_DeltaTime * cameraRight.z;
     }
 
+    if (glfwGetKey(GetWindow(), GLFW_KEY_P) == GLFW_PRESS)
+    {
+        m_TimeScale = 0.0f;
+    }
+    if (glfwGetKey(GetWindow(), GLFW_KEY_O) == GLFW_PRESS)
+    {
+        m_TimeScale = 1.0f;
+    }
+
 	XMVECTOR eyePosition = XMLoadFloat3(&m_CameraPosition);
 	XMVECTOR focusPosition = XMVectorSet(m_CameraFocusPoint.x, m_CameraFocusPoint.y, m_CameraFocusPoint.z, 1.0f);
 	XMVECTOR upDirection = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
@@ -503,7 +512,7 @@ void D3D11Application::Update()
 
 void D3D11Application::Render()
 {
-    constexpr float clearColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+    constexpr float clearColor[] = { 0.53f, 0.81f, 0.92f, 1.0f };
     constexpr UINT vertexStride = sizeof(VertexData);
     constexpr UINT vertexOffset = 0;
 
