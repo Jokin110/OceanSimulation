@@ -74,10 +74,6 @@ bool WindowApplication::Initialize()
 	glfwSetWindowUserPointer(m_Window, this);
 	glfwSetFramebufferSizeCallback(m_Window, HandleResize);
 
-	m_CurrentTime = std::chrono::high_resolution_clock::now();
-
-    m_Time = 0.0f;
-
     return true;
 }
 
@@ -110,13 +106,5 @@ int32_t WindowApplication::GetWindowHeight() const
 
 void WindowApplication::Update()
 {
-	auto oldTime = m_CurrentTime;
-	m_CurrentTime = std::chrono::high_resolution_clock::now();
-
-	std::chrono::duration<double, std::milli> timeSpan = (m_CurrentTime - oldTime);
-    m_DeltaTime = static_cast<float>(timeSpan.count() / 1000.0);
-
-	m_Time += m_DeltaTime * m_TimeScale;
-
     glfwPollEvents();
 }

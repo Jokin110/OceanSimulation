@@ -19,11 +19,28 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\CameraManager.h" />
+    <ClInclude Include="include\InputManager.h" />
+    <ClInclude Include="include\Object.h" />
+    <ClInclude Include="include\ObjectManager.h" />
+    <ClInclude Include="include\OceanSurface.h" />
+    <ClInclude Include="include\SceneManager.h" />
+    <ClInclude Include="include\SkyBox.h" />
+    <ClInclude Include="include\TimeManager.h" />
+    <ClInclude Include="include\Vector3.h" />
     <ClInclude Include="include\WindowApplication.h" />
     <ClInclude Include="include\D3D11Application.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="source\CameraManager.cpp" />
+    <ClCompile Include="source\InputManager.cpp" />
+    <ClCompile Include="source\ObjectManager.cpp" />
+    <ClCompile Include="source\OceanSurface.cpp" />
+    <ClCompile Include="source\SceneManager.cpp" />
+    <ClCompile Include="source\SkyBox.cpp" />
+    <ClCompile Include="source\TimeManager.cpp" />
+    <ClCompile Include="source\Vector3.cpp" />
     <ClCompile Include="source\WindowApplication.cpp" />
     <ClCompile Include="source\D3D11Application.cpp" />
   </ItemGroup>
