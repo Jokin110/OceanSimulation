@@ -13,6 +13,10 @@
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "dxguid.lib")
 
+#include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
+#include "backends/imgui_impl_dx11.h"
+
 #include "WindowApplication.h"
 
 #include <vector>
@@ -37,7 +41,12 @@ public:
 
 	ID3D11VertexShader* CreateVertexShader(const std::wstring& fileName, ID3DBlob*& vertexShaderBlob) const;
 
-	ID3D11PixelShader* CreatePixelShader(const std::wstring& fileName) const;
+	ID3D11PixelShader* CreatePixelShader(const std::wstring& fileName) const; 
+
+	ID3D11HullShader* CreateHullShader(const std::wstring& fileName) const;
+	ID3D11DomainShader* CreateDomainShader(const std::wstring& fileName) const;
+
+	ID3D11ComputeShader* CreateComputeShader(const std::wstring& fileName) const;
 
 protected:
 	bool Initialize() override;
@@ -61,6 +70,9 @@ private:
 
 	bool InitializeManagers();
 	void UpdateManagers();
+
+	bool InitializeImGui();
+	void CleanupImGui();
 
 	ID3D11Device* m_d3dDevice = nullptr;
 	ID3D11DeviceContext* m_d3dDeviceContext = nullptr;

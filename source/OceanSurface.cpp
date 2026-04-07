@@ -1,9 +1,34 @@
 #include "OceanSurface.h"
 #include "CameraManager.h"
+#include "imgui.h"
+#include <fstream>
 
 bool OceanSurface::Initialize()
 {
-	return Object::Initialize();
+	bool result = Object::Initialize();
+
+	if (result)
+	{
+		m_PixelShaderBufferData = {};
+		m_PixelShaderBufferData.m_FoamColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		m_PixelShaderBufferData.m_FoamBias = 0.3f;
+		m_PixelShaderBufferData.m_LightColor = XMFLOAT3(0.53f, 0.81f, 0.92f);
+		m_PixelShaderBufferData.m_AmbientLightIntensity = 0.25f;
+		m_PixelShaderBufferData.m_LightDirection = XMFLOAT3(0.0f, -0.5f, -1.0f);
+		m_PixelShaderBufferData.m_SpecularColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		m_PixelShaderBufferData.m_FogColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
+		m_PixelShaderBufferData.m_FogDistance = 800.0f;
+
+		m_PixelShaderBufferData.m_UpwellingColor = XMFLOAT3(0.1f, 0.3f, 0.4f);
+		m_PixelShaderBufferData.m_Snell = 1.33f;
+		m_PixelShaderBufferData.m_AirColor = XMFLOAT3(0.1f, 0.1f, 0.1f);
+		m_PixelShaderBufferData.m_kDiffuse = 0.01;
+
+		D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(GetPixelShaderBuffers(), 0, nullptr, &m_PixelShaderBufferData, 0, 0);
+		m_UpdatePixelShaderBuffer = true;
+	}
+
+	return result;
 }
 
 void OceanSurface::Start()
@@ -25,6 +50,53 @@ void OceanSurface::Update()
 	m_ConstantBufferData.m_ViewProjectionMatrix = XMMatrixMultiply(CameraManager::GetInstance().GetViewMatrix(), CameraManager::GetInstance().GetProjectionMatrix());
 	m_ConstantBufferData.m_Time = TimeManager::GetInstance().GetTime();
 	m_ConstantBufferData.m_CameraPosition = CameraManager::GetInstance().GetCameraPosition();
+
+	ImGui::Begin("Ocean Surface Rendering Settings");
+	ImGui::ColorEdit3("Foam Color", (float*)&m_PixelShaderBufferData.m_FoamColor);
+	ImGui::SliderFloat("Foam Bias", &m_PixelShaderBufferData.m_FoamBias, 0.0f, 1.0f);
+	ImGui::ColorEdit3("Light Color", (float*)&m_PixelShaderBufferData.m_LightColor);
+	ImGui::SliderFloat("Ambient Light Intensity", &m_PixelShaderBufferData.m_AmbientLightIntensity, 0.0f, 1.0f);
+	ImGui::SliderFloat3("Light Direction", (float*)&m_PixelShaderBufferData.m_LightDirection, -1.0f, 1.0f);
+	ImGui::ColorEdit3("Specular Color", (float*)&m_PixelShaderBufferData.m_SpecularColor);
+	ImGui::ColorEdit3("Fog Color", (float*)&m_PixelShaderBufferData.m_FogColor);
+	ImGui::SliderFloat("Fog Distance", &m_PixelShaderBufferData.m_FogDistance, 0.0f, 2000.0f);
+	ImGui::ColorEdit3("Upwelling Color", (float*)&m_PixelShaderBufferData.m_UpwellingColor);
+	ImGui::SliderFloat("Snell's Index", &m_PixelShaderBufferData.m_Snell, 1.0f, 2.0f);
+	ImGui::ColorEdit3("Air Color", (float*)&m_PixelShaderBufferData.m_AirColor);
+	ImGui::SliderFloat("Diffuse Coefficient", &m_PixelShaderBufferData.m_kDiffuse, 0.0f, 1.0f);
+
+	if (ImGui::Button("Apply Changes"))
+	{
+		D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(GetPixelShaderBuffers(), 0, nullptr, &m_PixelShaderBufferData, 0, 0);
+		m_UpdatePixelShaderBuffer = true;
+	}
+
+	if (ImGui::Button("Save Settings"))
+	{
+		std::ofstream outFile("OceanSettings.bin", std::ios::binary);
+		if (outFile.is_open())
+		{
+			outFile.write(reinterpret_cast<const char*>(&m_PixelShaderBufferData), sizeof(m_PixelShaderBufferData));
+			outFile.close();
+		}
+	}
+
+	ImGui::SameLine();
+	
+	if (ImGui::Button("Load Settings"))
+	{
+		std::ifstream inFile("OceanSettings.bin", std::ios::binary);
+		if (inFile.is_open())
+		{
+			inFile.read(reinterpret_cast<char*>(&m_PixelShaderBufferData), sizeof(m_PixelShaderBufferData));
+			inFile.close();
+
+			D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(GetPixelShaderBuffers(), 0, nullptr, &m_PixelShaderBufferData, 0, 0);
+			m_UpdatePixelShaderBuffer = true;
+		}
+	}
+
+	ImGui::End();
 
 	Object::Update();
 }
@@ -72,10 +144,10 @@ void OceanSurface::GenerateMesh()
 	m_Vertices.clear();
 	m_Indices.clear();
 
-	int widthVertices = 1024;
-	int depthVertices = 1024;
+	int widthVertices = 128;
+	int depthVertices = 128;
 
-	float separation = 0.1f;
+	float separation = 10.0f;
 
 	float startX = -((widthVertices - 1) * separation) / 2.0f;
 	float startZ = -((depthVertices - 1) * separation) / 2.0f;
@@ -109,11 +181,8 @@ void OceanSurface::GenerateMesh()
 
 			m_Indices.push_back(bottomLeftVertex);
 			m_Indices.push_back(topLeftVertex);
-			m_Indices.push_back(topRightVertex);
-
-			m_Indices.push_back(bottomLeftVertex);
-			m_Indices.push_back(topRightVertex);
 			m_Indices.push_back(bottomRightVertex);
+			m_Indices.push_back(topRightVertex);
 		}
 	}
 }

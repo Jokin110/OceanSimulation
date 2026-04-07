@@ -7,7 +7,10 @@ int main(int argc, char* argv[])
         D3D11Application::GetInstance().Run();
     }
 
-	//std::cout << "Press Enter to exit...";
-    //std::cin.get();
+#if _DEBUG
+#else
+	std::cout << "Press Enter to exit...";
+    std::cin.get();
+#endif
 	return 0;
 }

@@ -18,7 +18,13 @@ struct PerObjectConstantBufferDataSkyBox
 	XMMATRIX m_WorldViewProjectioMatrix;
 };
 
-class SkyBox : public Object<VertexDataSkyBox, PerObjectConstantBufferDataSkyBox>
+// Define the structure of the constant buffers for the pixel shader
+struct PerObjectPixelShaderBufferDataSkyBox
+{
+	
+};
+
+class SkyBox : public Object<VertexDataSkyBox, PerObjectConstantBufferDataSkyBox, PerObjectPixelShaderBufferDataSkyBox>
 {
 public:
 	SkyBox() : Object() {}

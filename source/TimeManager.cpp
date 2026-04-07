@@ -1,4 +1,5 @@
 #include "TimeManager.h"
+#include <imgui.h>
 
 TimeManager* TimeManager::m_Instance = nullptr;
 
@@ -7,6 +8,7 @@ TimeManager::TimeManager()
 	m_CurrentTime = std::chrono::high_resolution_clock::now();
 
 	m_Time = 0.0f;
+	m_UnscaledTime = 0.0f;
 	m_TimeScale = 1.0f;
 }
 
@@ -36,7 +38,14 @@ void TimeManager::Update()
 	m_CurrentTime = std::chrono::high_resolution_clock::now();
 
 	std::chrono::duration<double, std::milli> timeSpan = (m_CurrentTime - oldTime);
-	m_DeltaTime = static_cast<float>(timeSpan.count() / 1000.0);
 
-	m_Time += m_DeltaTime * m_TimeScale;
+	m_UnscaledDeltaTime = static_cast<float>(timeSpan.count() / 1000.0);
+	m_DeltaTime = m_UnscaledDeltaTime * m_TimeScale;
+
+	m_Time += m_DeltaTime;
+	m_UnscaledTime += m_UnscaledDeltaTime;
+
+	ImGui::Begin("FPS");
+	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", m_UnscaledDeltaTime * 1000.0f, 1.0f / m_UnscaledDeltaTime);
+	ImGui::End();
 }

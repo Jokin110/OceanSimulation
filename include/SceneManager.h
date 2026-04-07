@@ -21,7 +21,7 @@ public:
 private:
     static SceneManager* m_Instance;
 
-	OceanSurface m_Ocean = OceanSurface("Ocean Surface");
-    SkyBox m_SkyBox = SkyBox("SkyBox");
+    OceanSurface m_Ocean = OceanSurface("Ocean Surface" , L"assets/shaders/OceanSurfaceVS.hlsl", L"assets/shaders/PixelShader.hlsl", L"assets/shaders/OceanSurfaceHS.hlsl", L"assets/shaders/OceanSurfaceDS.hlsl", D3D11_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
+    //SkyBox m_SkyBox = SkyBox("SkyBox");
 };
 

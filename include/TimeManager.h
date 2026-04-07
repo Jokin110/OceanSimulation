@@ -17,7 +17,9 @@ public:
 	void Update();
 
     float GetTime() const { return m_Time; }
+	float GetUnscaledTime() const { return m_UnscaledTime; }
     float GetDeltaTime() const { return m_DeltaTime; }
+	float GetUnscaledDeltaTime() const { return m_UnscaledDeltaTime; }
 	float GetTimeScale() const { return m_TimeScale; }
 	void SetTimeScale(float timeScale) { m_TimeScale = timeScale; }
 
@@ -27,7 +29,9 @@ private:
 	std::chrono::high_resolution_clock::time_point m_CurrentTime;
 
     float m_Time = 0.0f;
+	float m_UnscaledTime = 0.0f;
     float m_DeltaTime = 0.016f;
+	float m_UnscaledDeltaTime = 0.016f;
     float m_TimeScale = 1.0f;
 };
 

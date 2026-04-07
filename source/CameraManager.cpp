@@ -4,11 +4,14 @@
 #include "InputManager.h"
 #include "GLFW/glfw3.h"
 
+#include "imgui.h"
+
 CameraManager* CameraManager::m_Instance = nullptr;
 
 CameraManager::CameraManager()
 {
-
+    m_ViewMatrix = XMMATRIX();
+	m_ProjectionMatrix = XMMATRIX();
 }
 
 CameraManager::~CameraManager()
@@ -45,23 +48,23 @@ void CameraManager::Update()
 
     if (InputManager::GetInstance().GetKey(GLFW_KEY_W))
     {
-        m_CameraPosition.x += m_Speed * TimeManager::GetInstance().GetDeltaTime() * cameraForward.x;
-        m_CameraPosition.z += m_Speed * TimeManager::GetInstance().GetDeltaTime() * cameraForward.z;
+        m_CameraPosition.x += m_Speed * TimeManager::GetInstance().GetUnscaledDeltaTime() * cameraForward.x;
+        m_CameraPosition.z += m_Speed * TimeManager::GetInstance().GetUnscaledDeltaTime() * cameraForward.z;
     }
     if (InputManager::GetInstance().GetKey(GLFW_KEY_S))
     {
-        m_CameraPosition.x -= m_Speed * TimeManager::GetInstance().GetDeltaTime() * cameraForward.x;
-        m_CameraPosition.z -= m_Speed * TimeManager::GetInstance().GetDeltaTime() * cameraForward.z;
+        m_CameraPosition.x -= m_Speed * TimeManager::GetInstance().GetUnscaledDeltaTime() * cameraForward.x;
+        m_CameraPosition.z -= m_Speed * TimeManager::GetInstance().GetUnscaledDeltaTime() * cameraForward.z;
     }
     if (InputManager::GetInstance().GetKey(GLFW_KEY_A))
     {
-        m_CameraPosition.x -= m_Speed * TimeManager::GetInstance().GetDeltaTime() * cameraRight.x;
-        m_CameraPosition.z -= m_Speed * TimeManager::GetInstance().GetDeltaTime() * cameraRight.z;
+        m_CameraPosition.x -= m_Speed * TimeManager::GetInstance().GetUnscaledDeltaTime() * cameraRight.x;
+        m_CameraPosition.z -= m_Speed * TimeManager::GetInstance().GetUnscaledDeltaTime() * cameraRight.z;
     }
     if (InputManager::GetInstance().GetKey(GLFW_KEY_D))
     {
-        m_CameraPosition.x += m_Speed * TimeManager::GetInstance().GetDeltaTime() * cameraRight.x;
-        m_CameraPosition.z += m_Speed * TimeManager::GetInstance().GetDeltaTime() * cameraRight.z;
+        m_CameraPosition.x += m_Speed * TimeManager::GetInstance().GetUnscaledDeltaTime() * cameraRight.x;
+        m_CameraPosition.z += m_Speed * TimeManager::GetInstance().GetUnscaledDeltaTime() * cameraRight.z;
     }
 
     if (InputManager::GetInstance().GetKey(GLFW_KEY_P))

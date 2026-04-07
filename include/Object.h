@@ -27,22 +27,34 @@ public:
 	virtual ID3D11Buffer*& GetIndexBuffer() = 0;
 
 	virtual ID3D11VertexShader*& GetVertexShader() = 0;
-	virtual ID3D11PixelShader*& GetPixelShader() = 0;
+	virtual ID3D11PixelShader*& GetPixelShader() = 0; 
+	
+	virtual ID3D11HullShader*& GetHullShader() = 0;
+	virtual ID3D11DomainShader*& GetDomainShader() = 0;
+	virtual D3D11_PRIMITIVE_TOPOLOGY GetTopology() = 0;
 
 	virtual ID3D11Buffer*& GetConstantBuffers() = 0;
+	virtual ID3D11Buffer*& GetPixelShaderBuffers() = 0;
+
+	virtual bool GetUpdatePixelShaderBuffer() = 0;
+	virtual void SetUpdatePixelShaderBuffer(bool update) = 0;
 
 	virtual UINT GetIndexCount() = 0;
 
 	virtual UINT GetVertexStride() = 0;
+
+	virtual bool UseTessellation() = 0;
 };
 
-template<typename VertexData, typename ConstantBufferData>
+template<typename VertexData, typename ConstantBufferData, typename PixelShaderBufferData>
 class Object : IObject
 {
 public:
 	Object();
 	Object(string name);
 	Object(string name, wstring vertexShaderFile, wstring pixelShaderFile);
+	Object(string name, wstring hullShaderFile, wstring domainShaderFile, D3D11_PRIMITIVE_TOPOLOGY topology);
+	Object(string name, wstring vertexShaderFile, wstring pixelShaderFile, wstring hullShaderFile, wstring domainShaderFile, D3D11_PRIMITIVE_TOPOLOGY topology);
 	~Object();
 
 	virtual bool Initialize();
@@ -56,11 +68,21 @@ public:
 	ID3D11VertexShader*& GetVertexShader() { return m_d3dVertexShader; }
 	ID3D11PixelShader*& GetPixelShader() { return m_d3dPixelShader; }
 
+	ID3D11HullShader*& GetHullShader() { return m_d3dHullShader; }
+	ID3D11DomainShader*& GetDomainShader() { return m_d3dDomainShader; }
+	D3D11_PRIMITIVE_TOPOLOGY GetTopology() { return m_Topology; }
+
 	ID3D11Buffer*& GetConstantBuffers() { return m_d3dConstantBuffers; }
+	ID3D11Buffer*& GetPixelShaderBuffers() { return m_d3dPixelShaderBuffers; }
+
+	bool GetUpdatePixelShaderBuffer() { return m_UpdatePixelShaderBuffer; }
+	void SetUpdatePixelShaderBuffer(bool update) { m_UpdatePixelShaderBuffer = update; }
 
 	UINT GetIndexCount() { return static_cast<UINT>(m_Indices.size()); }
 
 	UINT GetVertexStride() { return sizeof(VertexData); }
+
+	bool UseTessellation() { return !m_HullShaderFile.empty() && !m_DomainShaderFile.empty(); }
 
 protected:
 	string m_Name;
@@ -71,13 +93,21 @@ protected:
 	wstring m_VertexShaderFile;
 	wstring m_PixelShaderFile;
 
+	wstring m_HullShaderFile = L"";
+	wstring m_DomainShaderFile = L"";
+	D3D11_PRIMITIVE_TOPOLOGY m_Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
 	virtual UINT GetVertexInputLayout(D3D11_INPUT_ELEMENT_DESC*& inputLayout) = 0;
 	void GetConstantBufferDesc(D3D11_BUFFER_DESC& constantBufferDesc);
+	void GetPixelShaderBufferDesc(D3D11_BUFFER_DESC& pixelShaderBufferDesc);
 
 	vector<VertexData> m_Vertices;
 	vector<int> m_Indices;
 
 	ConstantBufferData m_ConstantBufferData;
+	PixelShaderBufferData m_PixelShaderBufferData;
+
+	bool m_UpdatePixelShaderBuffer = false;
 
 	virtual void GenerateMesh() = 0;
 
@@ -87,9 +117,13 @@ private:
 	ID3D11Buffer* m_d3dIndexBuffer = nullptr;
 
 	ID3D11VertexShader* m_d3dVertexShader = nullptr;
-	ID3D11PixelShader* m_d3dPixelShader = nullptr;
+	ID3D11PixelShader* m_d3dPixelShader = nullptr; 
+	
+	ID3D11HullShader* m_d3dHullShader = nullptr;
+	ID3D11DomainShader* m_d3dDomainShader = nullptr;
 
 	ID3D11Buffer* m_d3dConstantBuffers = nullptr;
+	ID3D11Buffer* m_d3dPixelShaderBuffers = nullptr;
 
 	UINT GetVerticesByteWidth() { return static_cast<UINT>(sizeof(VertexData) * m_Vertices.size()); }
 	UINT GetIndicesByteWidth() { return static_cast<UINT>(sizeof(int) * m_Indices.size()); }
@@ -105,8 +139,8 @@ private:
 	}
 };
 
-template<typename VertexData, typename ConstantBufferData>
-Object<VertexData, ConstantBufferData>::Object()
+template<typename VertexData, typename ConstantBufferData, typename PixelShaderBufferData>
+Object<VertexData, ConstantBufferData, PixelShaderBufferData>::Object()
 {
 	m_Name = "New Object";
 
@@ -122,42 +156,66 @@ Object<VertexData, ConstantBufferData>::Object()
 	m_d3dIndexBuffer = nullptr;
 	m_d3dVertexShader = nullptr;
 	m_d3dPixelShader = nullptr;
+	m_d3dHullShader = nullptr;
+	m_d3dDomainShader = nullptr;
 	m_d3dConstantBuffers = nullptr;
+	m_d3dPixelShaderBuffers = nullptr;
 
 	m_ConstantBufferData = {};
+	m_PixelShaderBufferData = {};
 
 	ObjectManager::GetInstance().AddObjectToList(this);
 }
 
-template<typename VertexData, typename ConstantBufferData>
-Object<VertexData, ConstantBufferData>::Object(string name) : Object()
+template<typename VertexData, typename ConstantBufferData, typename PixelShaderBufferData>
+Object<VertexData, ConstantBufferData, PixelShaderBufferData>::Object(string name) : Object()
 {
 	m_Name = name;
 }
 
-template<typename VertexData, typename ConstantBufferData>
-Object<VertexData, ConstantBufferData>::Object(string name, wstring vertexShaderFile, wstring pixelShaderFile) : Object(name)
+template<typename VertexData, typename ConstantBufferData, typename PixelShaderBufferData>
+Object<VertexData, ConstantBufferData, PixelShaderBufferData>::Object(string name, wstring vertexShaderFile, wstring pixelShaderFile) : Object(name)
 {
 	m_VertexShaderFile = vertexShaderFile;
 	m_PixelShaderFile = pixelShaderFile;
 }
 
-template<typename VertexData, typename ConstantBufferData>
-Object<VertexData, ConstantBufferData>::~Object()
+template<typename VertexData, typename ConstantBufferData, typename PixelShaderBufferData>
+Object<VertexData, ConstantBufferData, PixelShaderBufferData>::Object(string name, wstring hullShaderFile, wstring domainShaderFile, D3D11_PRIMITIVE_TOPOLOGY topology) : Object(name)
+{
+	m_HullShaderFile = hullShaderFile;
+	m_DomainShaderFile = domainShaderFile;
+	m_Topology = topology;
+}
+
+template<typename VertexData, typename ConstantBufferData, typename PixelShaderBufferData>
+Object<VertexData, ConstantBufferData, PixelShaderBufferData>::Object(string name, wstring vertexShaderFile, wstring pixelShaderFile, wstring hullShaderFile, wstring domainShaderFile, D3D11_PRIMITIVE_TOPOLOGY topology) : Object(name)
+{
+	m_VertexShaderFile = vertexShaderFile;
+	m_PixelShaderFile = pixelShaderFile;
+	m_HullShaderFile = hullShaderFile;
+	m_DomainShaderFile = domainShaderFile;
+	m_Topology = topology;
+}
+
+template<typename VertexData, typename ConstantBufferData, typename PixelShaderBufferData>
+Object<VertexData, ConstantBufferData, PixelShaderBufferData>::~Object()
 {
 	SafeRelease(m_d3dInputLayout);
 	SafeRelease(m_d3dVertexBuffer);
 	SafeRelease(m_d3dIndexBuffer);
 	SafeRelease(m_d3dVertexShader);
 	SafeRelease(m_d3dPixelShader);
+	SafeRelease(m_d3dHullShader);
+	SafeRelease(m_d3dDomainShader);
 	SafeRelease(m_d3dConstantBuffers);
 
 	m_Vertices.clear();
 	m_Indices.clear();
 }
 
-template<typename VertexData, typename ConstantBufferData>
-bool Object<VertexData, ConstantBufferData>::Initialize()
+template<typename VertexData, typename ConstantBufferData, typename PixelShaderBufferData>
+bool Object<VertexData, ConstantBufferData, PixelShaderBufferData>::Initialize()
 {
 	GenerateMesh();
 
@@ -165,7 +223,7 @@ bool Object<VertexData, ConstantBufferData>::Initialize()
 #if _DEBUG
 	m_d3dVertexShader = D3D11Application::GetInstance().CreateVertexShader(m_VertexShaderFile, vertexShaderBlob);
 #else
-	m_d3dVertexShader = CreateVertexShader(L"../../" + m_VertexShaderFile, vertexShaderBlob);
+	m_d3dVertexShader = D3D11Application::GetInstance().CreateVertexShader(L"../../" + m_VertexShaderFile, vertexShaderBlob);
 #endif
 
 	if (m_d3dVertexShader == nullptr)
@@ -176,12 +234,38 @@ bool Object<VertexData, ConstantBufferData>::Initialize()
 #if _DEBUG
 	m_d3dPixelShader = D3D11Application::GetInstance().CreatePixelShader(m_PixelShaderFile);
 #else
-	m_d3dPixelShader = CreatePixelShader(L"../../" + m_PixelShaderFile);
+	m_d3dPixelShader = D3D11Application::GetInstance().CreatePixelShader(L"../../" + m_PixelShaderFile);
 #endif
 
 	if (m_d3dPixelShader == nullptr)
 	{
 		return false;
+	}
+
+	if (!m_HullShaderFile.empty())
+	{
+#if _DEBUG
+		m_d3dHullShader = D3D11Application::GetInstance().CreateHullShader(m_HullShaderFile);
+#else
+		m_d3dHullShader = D3D11Application::GetInstance().CreateHullShader(L"../../" + m_HullShaderFile);
+#endif
+		if (m_d3dHullShader == nullptr)
+		{
+			return false;
+		}
+	}
+
+	if (!m_DomainShaderFile.empty())
+	{
+#if _DEBUG
+		m_d3dDomainShader = D3D11Application::GetInstance().CreateDomainShader(m_DomainShaderFile);
+#else
+		m_d3dDomainShader = D3D11Application::GetInstance().CreateDomainShader(L"../../" + m_DomainShaderFile);
+#endif
+		if (m_d3dDomainShader == nullptr)
+		{
+			return false;
+		}
 	}
 
 	D3D11_INPUT_ELEMENT_DESC* vertexInputLayout = nullptr;
@@ -245,26 +329,47 @@ bool Object<VertexData, ConstantBufferData>::Initialize()
 		return false;
 	}
 
+	D3D11_BUFFER_DESC pixelShaderBufferDesc = {};
+	GetConstantBufferDesc(pixelShaderBufferDesc);
+
+	if (FAILED(D3D11Application::GetInstance().GetDevice()->CreateBuffer(
+		&pixelShaderBufferDesc,
+		nullptr,
+		&m_d3dPixelShaderBuffers)))
+	{
+		cout << "D3D11: Failed to create per-object pixel shader buffer\n";
+		return false;
+	}
+
 	return true;
 }
 
-template<typename VertexData, typename ConstantBufferData>
-void Object<VertexData, ConstantBufferData>::Start()
+template<typename VertexData, typename ConstantBufferData, typename PixelShaderBufferData>
+void Object<VertexData, ConstantBufferData, PixelShaderBufferData>::Start()
 {
 
 }
 
-template<typename VertexData, typename ConstantBufferData>
-void Object<VertexData, ConstantBufferData>::Update()
+template<typename VertexData, typename ConstantBufferData, typename PixelShaderBufferData>
+void Object<VertexData, ConstantBufferData, PixelShaderBufferData>::Update()
 {
 	D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(m_d3dConstantBuffers, 0, nullptr, &m_ConstantBufferData, 0, 0);
 }
 
-template<typename VertexData, typename ConstantBufferData>
-void Object<VertexData, ConstantBufferData>::GetConstantBufferDesc(D3D11_BUFFER_DESC& constantBufferDesc)
+template<typename VertexData, typename ConstantBufferData, typename PixelShaderBufferData>
+void Object<VertexData, ConstantBufferData, PixelShaderBufferData>::GetConstantBufferDesc(D3D11_BUFFER_DESC& constantBufferDesc)
 {
 	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	constantBufferDesc.ByteWidth = sizeof(ConstantBufferData);
+	constantBufferDesc.CPUAccessFlags = 0;
+	constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+}
+
+template<typename VertexData, typename ConstantBufferData, typename PixelShaderBufferData>
+void Object<VertexData, ConstantBufferData, PixelShaderBufferData>::GetPixelShaderBufferDesc(D3D11_BUFFER_DESC& constantBufferDesc)
+{
+	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	constantBufferDesc.ByteWidth = sizeof(PixelShaderBufferData);
 	constantBufferDesc.CPUAccessFlags = 0;
 	constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 }

@@ -1,5 +1,29 @@
 #define PI 3.14159265359
 
+struct DSInput
+{
+    float3 Position : POSITION;
+    float3 Normal : NORMAL;
+    float3 Color : COLOR;
+};
+
+struct DSOutput
+{
+    float3 WorldPosition : TEXCOORD0;
+    float3 NormalWS : NORMAL;
+    float3 ViewVector : TEXCOORD2;
+    float3 EyePos : TEXCOORD3;
+    float Jacobian : JACOBIAN;
+    float3 Color : COLOR;
+    float4 Position : SV_POSITION;
+};
+
+struct PatchTess
+{
+    float EdgeTess[4] : SV_TessFactor;
+    float InsideTess[2] : SV_InsideTessFactor;
+};
+
 cbuffer PerObjectBuffer : register(b0)
 {
     row_major matrix m_WorldMatrix;
@@ -10,23 +34,8 @@ cbuffer PerObjectBuffer : register(b0)
     float3 m_CameraPosition;
 }
 
-struct VSInput
-{
-    float3 Position : POSITION;
-    float3 Normal : NORMAL;
-    float3 Color : COLOR;
-};
-
-struct VSOutput
-{
-    float3 WorldPosition : TEXCOORD0;
-    float3 NormalWS : NORMAL;
-    float3 ViewVector : TEXCOORD2;
-    float3 EyePos : TEXCOORD3;
-    float Jacobian : JACOBIAN;
-    float3 Color : COLOR;
-    float4 Position : SV_POSITION;
-};
+Texture2D DisplacementMap : register(t0);
+SamplerState LinearSampler : register(s0);
 
 struct WaveResults
 {
@@ -40,7 +49,7 @@ WaveResults CalculateWavePosition(float3 originalPos)
     WaveResults results = (WaveResults) 0;
     
     results.m_FinalPos = originalPos;
-    results.m_FinalPos.y = 0; 
+    results.m_FinalPos.y = 0;
     
     float2 initialDirection = normalize(float2(1.0, 0.5));
     float initialLength = 100.0f;
@@ -91,21 +100,45 @@ WaveResults CalculateWavePosition(float3 originalPos)
     return results;
 }
 
-VSOutput Main(VSInput input)
+[domain("quad")]
+DSOutput Main(PatchTess patchTess, float2 uv : SV_DomainLocation, const OutputPatch<DSInput, 4> quad)
 {
-    VSOutput output = (VSOutput) 0;
+    DSOutput output = (DSOutput) 0;
+
+    // 1. Bilinear Interpolation using the generated UVs    
+    float3 v1 = lerp(quad[0].Position, quad[2].Position, uv.x);
+    float3 v2 = lerp(quad[1].Position, quad[3].Position, uv.x);
+    float3 localPos = lerp(v1, v2, 1 - uv.y);
+
+    float3 n1 = lerp(quad[0].Normal, quad[2].Normal, uv.x);
+    float3 n2 = lerp(quad[1].Normal, quad[3].Normal, uv.x);
+    float3 localNormal = normalize(lerp(n1, n2, 1 - uv.y));
+
+    float3 c1 = lerp(quad[0].Color, quad[2].Color, uv.x);
+    float3 c2 = lerp(quad[1].Color, quad[3].Color, uv.x);
+    output.Color = lerp(c1, c2, 1 - uv.y);
     
-    float3 worldPosition = mul(float4(input.Position, 1.0), m_WorldMatrix).xyz;
+    // Sample the FFT texture you generated in the Compute Shader
+    float4 fftData = DisplacementMap.SampleLevel(LinearSampler, (localPos.xz + 128.0f) / 256.0f, 0);
+
+    //// Displace the vertex! (Assuming RGB = xyz displacement)
+    //localPos.x += fftData.x;
+    //localPos.y = fftData.x + fftData.y + fftData.z + fftData.w;
+    //localPos.z += fftData.z;
+
+    // Calculate Gerstner wave displacement and normal
+    float3 worldPosition = mul(float4(localPos, 1.0), m_WorldMatrix).xyz;
     
     WaveResults results = CalculateWavePosition(worldPosition);
     worldPosition = results.m_FinalPos;
+    //results.m_Normal = localNormal;
     
     output.WorldPosition = worldPosition;
     output.NormalWS = results.m_Normal;
     output.ViewVector = m_CameraPosition - worldPosition;
     output.EyePos = m_CameraPosition;
     output.Jacobian = results.m_Jacobian;
-    output.Color = input.Color;
+    //output.Color = input.Color;
     output.Position = mul(float4(worldPosition, 1.0), m_ViewProjectionMatrix);
     
     return output;

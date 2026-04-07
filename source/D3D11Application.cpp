@@ -11,6 +11,7 @@
 #include "SceneManager.h"
 #include "CameraManager.h"
 #include "InputManager.h"
+#include "OceanComputeManager.h"
 
 using namespace DirectX;
 
@@ -23,6 +24,8 @@ D3D11Application::D3D11Application(const string& title)
 
 D3D11Application::~D3D11Application()
 {
+    CleanupImGui();
+
 	// Ensure all pointers are released
     m_d3dDeviceContext->Flush();
     SafeRelease(m_d3dRasterizerState);
@@ -146,6 +149,11 @@ bool D3D11Application::Initialize()
         return false;
     }
 
+    if (!InitializeImGui())
+    {
+        return false;
+    }
+
     return true;
 }
 
@@ -176,7 +184,35 @@ bool D3D11Application::InitializeManagers()
         return false;
     }
 
+    if (!OceanComputeManager::Initialize())
+    {
+        return false;
+	}
+
     return true;
+}
+
+bool D3D11Application::InitializeImGui()
+{
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+    ImGui::StyleColorsDark();
+
+    ImGui_ImplGlfw_InitForOther(GetWindow(), true);
+    ImGui_ImplDX11_Init(m_d3dDevice, m_d3dDeviceContext);
+
+    return true;
+}
+
+void D3D11Application::CleanupImGui()
+{
+    ImGui_ImplDX11_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
 }
 
 bool D3D11Application::CreateSwapchainResources()
@@ -278,6 +314,8 @@ bool D3D11Application::Load()
 
     CameraManager::GetInstance().Start();
 
+    OceanComputeManager::GetInstance().Start();
+
     if (ObjectManager::GetInstance().InitializeObjects())
     {
 		ObjectManager::GetInstance().Start();
@@ -345,12 +383,17 @@ void D3D11Application::Update()
 {
     WindowApplication::Update();
 
+    ImGui_ImplDX11_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
     UpdateManagers();
 }
 
 void D3D11Application::UpdateManagers()
 {
     TimeManager::GetInstance().Update();
+	OceanComputeManager::GetInstance().Update();
 	SceneManager::GetInstance().Update();
     CameraManager::GetInstance().Update();
 	ObjectManager::GetInstance().Update();
@@ -363,12 +406,8 @@ void D3D11Application::Render()
 	ClearScreen(Colors::SkyBlue, 1.0f, 0);
 
     // D3D11 rendering for all objects
-    m_d3dDeviceContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-
     m_d3dDeviceContext->RSSetState(m_d3dRasterizerState);
     m_d3dDeviceContext->RSSetViewports(1, &m_d3dViewport);
-
 
     m_d3dDeviceContext->OMSetRenderTargets(1, &m_d3dRenderTargetView, m_d3dDepthStencilView);
     m_d3dDeviceContext->OMSetDepthStencilState(m_d3dDepthStencilState, 1);
@@ -376,22 +415,50 @@ void D3D11Application::Render()
     // D3D11 rendering for each object
     for (int i = 0; i < ObjectManager::GetInstance().GetObjectList().size(); i++)
     {
-        const UINT vertexStride = ObjectManager::GetInstance().GetObjectList()[i]->GetVertexStride();
+        auto object = ObjectManager::GetInstance().GetObjectList()[i];
+
+        m_d3dDeviceContext->IASetPrimitiveTopology(object->GetTopology());
+
+        const UINT vertexStride = object->GetVertexStride();
         constexpr UINT vertexOffset = 0;
 
-        m_d3dDeviceContext->IASetInputLayout(ObjectManager::GetInstance().GetObjectList()[i]->GetInputLayout());
+        m_d3dDeviceContext->IASetInputLayout(object->GetInputLayout());
 
-        m_d3dDeviceContext->IASetVertexBuffers(0, 1, &ObjectManager::GetInstance().GetObjectList()[i]->GetVertexBuffer(), &vertexStride, &vertexOffset);
-        
-        m_d3dDeviceContext->IASetIndexBuffer(ObjectManager::GetInstance().GetObjectList()[i]->GetIndexBuffer(), DXGI_FORMAT::DXGI_FORMAT_R32_UINT, 0);
+        m_d3dDeviceContext->IASetVertexBuffers(0, 1, &object->GetVertexBuffer(), &vertexStride, &vertexOffset);
 
-        m_d3dDeviceContext->VSSetShader(ObjectManager::GetInstance().GetObjectList()[i]->GetVertexShader(), nullptr, 0);
-        m_d3dDeviceContext->VSSetConstantBuffers(0, 1, &ObjectManager::GetInstance().GetObjectList()[i]->GetConstantBuffers());
+        m_d3dDeviceContext->IASetIndexBuffer(object->GetIndexBuffer(), DXGI_FORMAT::DXGI_FORMAT_R32_UINT, 0);
 
-        m_d3dDeviceContext->PSSetShader(ObjectManager::GetInstance().GetObjectList()[i]->GetPixelShader(), nullptr, 0);
+        m_d3dDeviceContext->VSSetShader(object->GetVertexShader(), nullptr, 0);
+        m_d3dDeviceContext->VSSetConstantBuffers(0, 1, &object->GetConstantBuffers());
 
-        m_d3dDeviceContext->DrawIndexed(ObjectManager::GetInstance().GetObjectList()[i]->GetIndexCount(), 0, 0);
+        if (object->UseTessellation())
+        {
+            m_d3dDeviceContext->HSSetShader(object->GetHullShader(), nullptr, 0);
+            m_d3dDeviceContext->HSSetConstantBuffers(0, 1, &object->GetConstantBuffers());
+
+            m_d3dDeviceContext->DSSetShader(object->GetDomainShader(), nullptr, 0);
+            m_d3dDeviceContext->DSSetConstantBuffers(0, 1, &object->GetConstantBuffers());
+
+            ID3D11ShaderResourceView* oceanSRV = OceanComputeManager::GetInstance().GetXYDisplacementSRV();
+            m_d3dDeviceContext->DSSetShaderResources(0, 1, &oceanSRV);
+        }
+
+        m_d3dDeviceContext->PSSetShader(object->GetPixelShader(), nullptr, 0);
+
+        ID3D11ShaderResourceView* pixelShaderSRV = OceanComputeManager::GetInstance().GetXYDisplacementSRV();
+        m_d3dDeviceContext->PSSetShaderResources(0, 1, &pixelShaderSRV);
+
+        if (object->GetUpdatePixelShaderBuffer())
+        {
+            m_d3dDeviceContext->PSSetConstantBuffers(0, 1, &object->GetPixelShaderBuffers());
+            object->SetUpdatePixelShaderBuffer(false);
+        }
+
+        m_d3dDeviceContext->DrawIndexed(object->GetIndexCount(), 0, 0);
     }
+
+    ImGui::Render();
+    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
     Present(true);
 }
@@ -399,6 +466,7 @@ void D3D11Application::Render()
 bool D3D11Application::CompileShader(const wstring& fileName, const string& entryPoint, const string& profile, ID3DBlob*& shaderBlob) const
 {
     constexpr UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS;
+    // Debug layer
 
     ID3DBlob* tempShaderBlob = nullptr;
     ID3DBlob* errorBlob = nullptr;
@@ -415,6 +483,7 @@ bool D3D11Application::CompileShader(const wstring& fileName, const string& entr
         &errorBlob)))
     {
         cout << "D3D11: Failed to read shader from file\n";
+		cout << fileName.data() << "\n";
 
         if (errorBlob != nullptr)
         {
@@ -474,4 +543,76 @@ ID3D11PixelShader* D3D11Application::CreatePixelShader(const wstring& fileName) 
     }
 
     return pixelShader;
+}
+
+ID3D11HullShader* D3D11Application::CreateHullShader(const wstring& fileName) const
+{
+    ID3DBlob* hullShaderBlob = nullptr;
+
+    if (!CompileShader(fileName, "Main", "hs_5_0", hullShaderBlob))
+    {
+        return nullptr;
+    }
+
+    ID3D11HullShader* hullShader;
+
+    if (FAILED(m_d3dDevice->CreateHullShader(
+        hullShaderBlob->GetBufferPointer(),
+        hullShaderBlob->GetBufferSize(),
+        nullptr,
+        &hullShader)))
+    {
+        cout << "D3D11: Failed to compile hull shader\n";
+        return nullptr;
+    }
+
+    return hullShader;
+}
+
+ID3D11DomainShader* D3D11Application::CreateDomainShader(const wstring& fileName) const
+{
+    ID3DBlob* shaderBlob = nullptr;
+
+    if (!CompileShader(fileName, "Main", "ds_5_0", shaderBlob))
+    {
+        return nullptr;
+    }
+
+    ID3D11DomainShader* domainShader = nullptr;
+
+    if (FAILED(m_d3dDevice->CreateDomainShader(
+        shaderBlob->GetBufferPointer(), 
+        shaderBlob->GetBufferSize(), 
+        nullptr, 
+        &domainShader)))
+    {
+        cout << "D3D11: Failed to create domain shader\n";
+		return nullptr;
+    }
+
+    return domainShader;
+}
+
+ID3D11ComputeShader* D3D11Application::CreateComputeShader(const wstring& fileName) const
+{
+    ID3DBlob* shaderBlob = nullptr;
+
+    if (!CompileShader(fileName, "Main", "cs_5_0", shaderBlob))
+    {
+        return nullptr;
+    }
+
+    ID3D11ComputeShader* computeShader = nullptr;
+
+    if (FAILED(m_d3dDevice->CreateComputeShader(
+        shaderBlob->GetBufferPointer(),
+        shaderBlob->GetBufferSize(),
+        nullptr,
+        &computeShader)))
+    {
+        cout << "D3D11: Failed to create compute shader\n";
+        return nullptr;
+    }
+
+    return computeShader;
 }
