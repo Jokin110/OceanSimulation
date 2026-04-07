@@ -48,6 +48,8 @@ WaveResults CalculateWavePosition(float3 originalPos)
 {
     WaveResults results = (WaveResults) 0;
     
+    return results;
+    
     results.m_FinalPos = originalPos;
     results.m_FinalPos.y = 0;
     
@@ -130,7 +132,7 @@ DSOutput Main(PatchTess patchTess, float2 uv : SV_DomainLocation, const OutputPa
     float3 worldPosition = mul(float4(localPos, 1.0), m_WorldMatrix).xyz;
     
     WaveResults results = CalculateWavePosition(worldPosition);
-    worldPosition = results.m_FinalPos;
+    //worldPosition = results.m_FinalPos;
     //results.m_Normal = localNormal;
     
     output.WorldPosition = worldPosition;

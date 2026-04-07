@@ -44,6 +44,7 @@ PatchTess ConstantHS(InputPatch<HSInput, 4> patch, uint patchID : SV_PrimitiveID
     const float minDistance = 10.0f; // Within this distance, use maximum tessellation
     
     float tessFactor = max(1.0f, 64.0f * pow(saturate((maxDistance - distanceToCamera) / (maxDistance - minDistance)), 6));
+    tessFactor = 1;
     
     pt.EdgeTess[0] = tessFactor; // Left edge
     pt.EdgeTess[1] = tessFactor; // Top edge

@@ -455,6 +455,10 @@ void D3D11Application::Render()
         }
 
         m_d3dDeviceContext->DrawIndexed(object->GetIndexCount(), 0, 0);
+
+        ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
+        m_d3dDeviceContext->DSSetShaderResources(0, 1, nullSRV);
+        m_d3dDeviceContext->PSSetShaderResources(0, 1, nullSRV);
     }
 
     ImGui::Render();

@@ -5,9 +5,12 @@
 Texture2D<float4> InitialSpectrumTexture : register(t0);
 
 // Displacement and slope output textures
-RWTexture2D<float4> DisplacementTexture : register(u0);
+RWTexture2D<float4> XYDisplacementTexture : register(u0);
+RWTexture2D<float4> ZDisplacementXXDerivativeTexture : register(u1);
+RWTexture2D<float4> XZYXDerivativeTexture : register(u2);
+RWTexture2D<float4> YZZZDerivativeTexture : register(u3);
 
-cbuffer OceanSimulationSettings : register(b0)
+cbuffer TimeEvolutionData : register(b0)
 {
     int m_OceanTextureSize; // Size of the ocean texture (e.g., 256x256)
     float m_PatchSize; // Size of the ocean patch in world units
@@ -15,18 +18,8 @@ cbuffer OceanSimulationSettings : register(b0)
     float m_SurfaceTension; // N/m
     float m_GravitationalConstant; // m/s^2
     float m_OceanDepth; // meters
-    float m_WindDirection; // Angle in degrees (0 = east, 90 = north, 180 = west, 270 = south)
-    float m_AverageWindSpeed; // m/s
-    float m_FetchLength; // meters
-    float m_PeakEnhancementFactor; // Dimensionless factor to enhance the peak of the spectrum
-    float m_Swell; // Dimensionless factor to add swell to the spectrum
-
-    float m_PeakFrequency; // Peak frequency of the spectrum in Hz
-    float m_Alpha; // Phillips spectrum alpha parameter
-    float m_WindAngle; // Wind direction in radians
-    
-    int m_RandomSeed; // Random seed to generate the random gaussian numbers
     float m_Time; // Simulation time in seconds
+    float m_Padding; // Padding to align to 16 bytes
 }
 
 float DispersionRelation(float kLength)
@@ -69,7 +62,10 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     
     if (kLength < 0.00001f)
     {
-        DisplacementTexture[uint2(x, y)] = float4(0, 0, 0, 0);
+        XYDisplacementTexture[uint2(x, y)] = float4(0, 0, 0, 0);
+        ZDisplacementXXDerivativeTexture[uint2(x, y)] = float4(0, 0, 0, 0);
+        XZYXDerivativeTexture[uint2(x, y)] = float4(0, 0, 0, 0);
+        YZZZDerivativeTexture[uint2(x, y)] = float4(0, 0, 0, 0);
         return;
     }
     
@@ -84,6 +80,14 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     float2 displacementX = ihKT * kx / kLength;
     float2 displacementY = hKT;
     float2 displacementZ = ihKT * ky /kLength;
+    float2 slopeXXDerivative = -hKT * (kx * kx) / kLength;
+    float2 slopeXZDerivative = -hKT * (kx * ky) / kLength;
+    float2 slopeYXDerivative = ihKT * kx;
+    float2 slopeYZDerivative = ihKT * ky;
+    float2 slopeZZDerivative = -hKT * ky * ky / kLength;
     
-    DisplacementTexture[uint2(x, y)] = float4(displacementX, displacementY); // Placeholder: Replace with actual time evolution logic
+    XYDisplacementTexture[uint2(x, y)] = float4(displacementX, displacementY); 
+    ZDisplacementXXDerivativeTexture[uint2(x, y)] = float4(displacementZ, slopeXXDerivative); 
+    XZYXDerivativeTexture[uint2(x, y)] = float4(slopeXZDerivative, slopeYXDerivative);
+    YZZZDerivativeTexture[uint2(x, y)] = float4(slopeYZDerivative, slopeZZDerivative);
 }
