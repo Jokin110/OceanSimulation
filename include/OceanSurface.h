@@ -10,7 +10,6 @@ using namespace DirectX;
 struct VertexData
 {
 	XMFLOAT3 position;
-	XMFLOAT3 normal;
 	XMFLOAT3 color;
 };
 
@@ -22,6 +21,10 @@ struct PerObjectConstantBufferData
 	XMMATRIX m_ViewProjectionMatrix;
 	float m_Time;
 	XMFLOAT3 m_CameraPosition;
+
+	int m_OceanTextureSize; // Size of the ocean texture (e.g., 256x256)
+	float m_PatchSize; // Size of the ocean patch in world units
+	XMFLOAT2 m_Padding; // Padding to align to 16 bytes
 };
 
 // Define the structure of the constant buffers for the pixel shader

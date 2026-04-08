@@ -141,16 +141,18 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     uint x = dispatchThreadID.x;
     uint y = dispatchThreadID.y;
     
+    float dk = 2.0f * PI / m_PatchSize; // Wave number increment based on the patch size and texture resolution
+    
     // Convert the thread ID to a wave vector (kx, ky) in the frequency domain. The wave vector components are centered around zero, so we need to shift them accordingly.
     float nx = x - m_OceanTextureSize / 2.0f; // (x < m_OceanTextureSize / 2.0f) ? x : (float) x - m_OceanTextureSize;
     float ny = y - m_OceanTextureSize / 2.0f; //(y < m_OceanTextureSize / 2.0f) ? y : (float) y - m_OceanTextureSize;
 
-    float kx = nx * (2.0f * PI / m_PatchSize);
-    float ky = ny * (2.0f * PI / m_PatchSize);
+    float kx = nx * dk;
+    float ky = ny * dk;
     
     float kLength = sqrt(kx * kx + ky * ky);
     
-    if (kLength < 0.00001f)
+    if (kLength <= PI / m_PatchSize || kLength >= PI * m_OceanTextureSize / m_PatchSize)
     {
         InitialSpectrumTexture[uint2(x, y)] = float4(0.0f, 0.0f, 0.0f, 0.0f);
         return;
@@ -160,7 +162,7 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     
     float omega = DispersionRelation(kLength);
     
-    float energyValue = JONSWAPSpectra(omega) * TMACorrection(omega) * DirectionalSpreadingFunction(omega, waveAngle) * DispersionRelationDerivative(kLength, omega) / kLength;
+    float energyValue = JONSWAPSpectra(omega) * dk * dk * TMACorrection(omega) * DirectionalSpreadingFunction(omega, waveAngle) * DispersionRelationDerivative(kLength, omega) / kLength;
     
     float2 randomNumber = GenerateRandomGaussianNumbers(x, y);
     
@@ -173,7 +175,7 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     float2 oppRandomNumber = GenerateRandomGaussianNumbers(oppX, oppY);
     
     float oppWaveAngle = waveAngle + PI;
-    float oppEnergyValue = JONSWAPSpectra(omega) * TMACorrection(omega) * DirectionalSpreadingFunction(omega, oppWaveAngle) * DispersionRelationDerivative(kLength, omega) / kLength;
+    float oppEnergyValue = JONSWAPSpectra(omega) * dk * dk * TMACorrection(omega) * DirectionalSpreadingFunction(omega, oppWaveAngle) * DispersionRelationDerivative(kLength, omega) / kLength;
                            
     float2 h0_opp = sqrt(max(oppEnergyValue, 0.0f) / 2.0f) * oppRandomNumber;
     

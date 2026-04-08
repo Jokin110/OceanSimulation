@@ -55,11 +55,12 @@ public:
     void Start();
     void Update();
 
+	int GetOceanTextureSize() const { return m_OceanTextureSize; }
+	float GetOceanPatchSize() const { return m_OceanPatchSize; }
+
     ID3D11ShaderResourceView* GetInitialSpectrumSRV() const { return m_InitialSpectrumSRV; }
-	ID3D11ShaderResourceView* GetXYDisplacementSRV() const { return m_XYDisplacementSRV; }
-	ID3D11ShaderResourceView* GetZDisplacementXXDerivativeSRV() const { return m_ZDisplacementXXDerivativeSRV; }
-	ID3D11ShaderResourceView* GetXZYXDerivativeSRV() const { return m_XZYXDerivativeSRV; }
-	ID3D11ShaderResourceView* GetYZZZDerivativeSRV() const { return m_YZZZDerivativeSRV; }
+	ID3D11ShaderResourceView* GetDisplacementSRV() const { return m_DisplacementSRV; }
+	ID3D11ShaderResourceView* GetSlopeSRV() const { return m_SlopeSRV; }
 
 private:
 	void InitializeOceanSimulationSettings(bool initial);
@@ -67,6 +68,7 @@ private:
 	void GenerateInitialSpectrum(bool initial);
 	void UpdateTimeEvolutionTextures();
 	void UpdateFFTTextures();
+	void GenerateDisplacementAndSlopeFinalTextures();
 	void UpdateUI();
 
 	bool CreateTextureAndViews();
@@ -74,8 +76,8 @@ private:
 
     static OceanComputeManager* m_Instance;
 
-	UINT m_OceanTextureSize = 256; // Example grid size for the ocean surface
-	UINT m_OceanPatchSize = 256; // Size of the ocean patch in world units
+	UINT m_OceanTextureSize = 1024; // Example grid size for the ocean surface
+	float m_OceanPatchSize = 1024.0f; // Size of the ocean patch in world units
 
 	float m_DensityOfWater = 1000.0f; // kg/m^3
 	float m_SurfaceTension = 0.074f; // N/m
@@ -90,34 +92,51 @@ private:
 	// Compute shader file paths
 	wstring m_InitialSpectrumComputeShaderFile = L"assets/shaders/InitialSpectrumCS.hlsl";
 	wstring m_TimeEvolutionComputeShaderFile = L"assets/shaders/TimeEvolutionCS.hlsl";
-	wstring m_FFTComputeShaderFile = L"assets/shaders/FFTOceanSurfaceCS.hlsl";
+	wstring m_DisplacementAndSlopeComputeShaderFile = L"assets/shaders/DisplacementAndSlopeCS.hlsl";
 
 	// Initial spectrum resources
 	ID3D11Texture2D* m_InitialSpectrumTexture = nullptr;
     ID3D11UnorderedAccessView* m_InitialSpectrumUAV = nullptr;
     ID3D11ShaderResourceView* m_InitialSpectrumSRV = nullptr;
 
-	// Displacement and slope resources
+	// Displacement and slope calculations resources
 	ID3D11Texture2D* m_XYDisplacementTexture = nullptr;
 	ID3D11UnorderedAccessView* m_XYDisplacementUAV = nullptr;
 	ID3D11ShaderResourceView* m_XYDisplacementSRV = nullptr;
+	ID3D11Texture2D* m_XYDisplacementPingPongTexture = nullptr;
+	ID3D11UnorderedAccessView* m_XYDisplacementPingPongUAV = nullptr;
 
 	ID3D11Texture2D* m_ZDisplacementXXDerivativeTexture = nullptr;
 	ID3D11UnorderedAccessView* m_ZDisplacementXXDerivativeUAV = nullptr;
 	ID3D11ShaderResourceView* m_ZDisplacementXXDerivativeSRV = nullptr;
+	ID3D11Texture2D* m_ZDisplacementXXDerivativePingPongTexture = nullptr;
+	ID3D11UnorderedAccessView* m_ZDisplacementXXDerivativePingPongUAV = nullptr;
 
 	ID3D11Texture2D* m_XZYXDerivativeTexture = nullptr;
 	ID3D11UnorderedAccessView* m_XZYXDerivativeUAV = nullptr;
 	ID3D11ShaderResourceView* m_XZYXDerivativeSRV = nullptr;
+	ID3D11Texture2D* m_XZYXDerivativePingPongTexture = nullptr;
+	ID3D11UnorderedAccessView* m_XZYXDerivativePingPongUAV = nullptr;
 
 	ID3D11Texture2D* m_YZZZDerivativeTexture = nullptr;
 	ID3D11UnorderedAccessView* m_YZZZDerivativeUAV = nullptr;
 	ID3D11ShaderResourceView* m_YZZZDerivativeSRV = nullptr;
+	ID3D11Texture2D* m_YZZZDerivativePingPongTexture = nullptr;
+	ID3D11UnorderedAccessView* m_YZZZDerivativePingPongUAV = nullptr;
+
+	// Displacement and slope resources
+	ID3D11Texture2D* m_DisplacementTexture = nullptr;
+	ID3D11UnorderedAccessView* m_DisplacementUAV = nullptr;
+	ID3D11ShaderResourceView* m_DisplacementSRV = nullptr;
+
+	ID3D11Texture2D* m_SlopeTexture = nullptr;
+	ID3D11UnorderedAccessView* m_SlopeUAV = nullptr;
+	ID3D11ShaderResourceView* m_SlopeSRV = nullptr;
 
 	// Compute shaders pointers
     ID3D11ComputeShader* m_InitialSpectrumComputeShader = nullptr;
 	ID3D11ComputeShader* m_TimeEvolutionComputeShader = nullptr;
-    ID3D11ComputeShader* m_FFTComputeShader = nullptr;
+	ID3D11ComputeShader* m_DisplacementAndSlopeComputeShader = nullptr;
 
 	// Buffer to hold ocean simulation settings
 	OceanSimulationSettings m_OceanSimulationSettingsBufferData;

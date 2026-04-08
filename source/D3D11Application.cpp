@@ -12,6 +12,7 @@
 #include "CameraManager.h"
 #include "InputManager.h"
 #include "OceanComputeManager.h"
+#include "FFTManager.h"
 
 using namespace DirectX;
 
@@ -185,6 +186,11 @@ bool D3D11Application::InitializeManagers()
     }
 
     if (!OceanComputeManager::Initialize())
+    {
+        return false;
+	}
+
+    if (!FFTManager::Initialize(OceanComputeManager::GetInstance().GetOceanTextureSize()))
     {
         return false;
 	}
@@ -439,14 +445,14 @@ void D3D11Application::Render()
             m_d3dDeviceContext->DSSetShader(object->GetDomainShader(), nullptr, 0);
             m_d3dDeviceContext->DSSetConstantBuffers(0, 1, &object->GetConstantBuffers());
 
-            ID3D11ShaderResourceView* oceanSRV = OceanComputeManager::GetInstance().GetXYDisplacementSRV();
-            m_d3dDeviceContext->DSSetShaderResources(0, 1, &oceanSRV);
+            ID3D11ShaderResourceView* oceanSRV[1] = { OceanComputeManager::GetInstance().GetDisplacementSRV() };
+            m_d3dDeviceContext->DSSetShaderResources(0, 1, oceanSRV);
         }
 
         m_d3dDeviceContext->PSSetShader(object->GetPixelShader(), nullptr, 0);
 
-        ID3D11ShaderResourceView* pixelShaderSRV = OceanComputeManager::GetInstance().GetXYDisplacementSRV();
-        m_d3dDeviceContext->PSSetShaderResources(0, 1, &pixelShaderSRV);
+        ID3D11ShaderResourceView* pixelShaderSRV[1] = { OceanComputeManager::GetInstance().GetSlopeSRV() };
+        m_d3dDeviceContext->PSSetShaderResources(0, 1, pixelShaderSRV);
 
         if (object->GetUpdatePixelShaderBuffer())
         {
@@ -607,6 +613,30 @@ ID3D11ComputeShader* D3D11Application::CreateComputeShader(const wstring& fileNa
     }
 
     ID3D11ComputeShader* computeShader = nullptr;
+
+    if (FAILED(m_d3dDevice->CreateComputeShader(
+        shaderBlob->GetBufferPointer(),
+        shaderBlob->GetBufferSize(),
+        nullptr,
+        &computeShader)))
+    {
+        cout << "D3D11: Failed to create compute shader\n";
+        return nullptr;
+    }
+
+    return computeShader;
+}
+
+ID3D11ComputeShader* D3D11Application::CreateComputeShaderWithEntry(const wstring& fileName, LPCSTR entryPoint) const
+{
+    ID3DBlob* shaderBlob = nullptr;
+
+    if (!CompileShader(fileName, entryPoint, "cs_5_0", shaderBlob))
+    {
+        return nullptr;
+    }
+
+    ID3D11ComputeShader* computeShader;
 
     if (FAILED(m_d3dDevice->CreateComputeShader(
         shaderBlob->GetBufferPointer(),

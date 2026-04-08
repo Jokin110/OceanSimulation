@@ -47,6 +47,7 @@ public:
 	ID3D11DomainShader* CreateDomainShader(const std::wstring& fileName) const;
 
 	ID3D11ComputeShader* CreateComputeShader(const std::wstring& fileName) const;
+	ID3D11ComputeShader* CreateComputeShaderWithEntry(const std::wstring& filePath, LPCSTR entryPoint) const;
 
 protected:
 	bool Initialize() override;

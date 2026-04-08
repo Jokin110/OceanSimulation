@@ -1,14 +1,12 @@
 struct HSInput
 {
     float3 Position : POSITION;
-    float3 Normal : NORMAL;
     float3 Color : COLOR;
 };
 
 struct HSOutput
 {
     float3 Position : POSITION;
-    float3 Normal : NORMAL;
     float3 Color : COLOR;
 };
 
@@ -26,6 +24,10 @@ cbuffer PerObjectBuffer : register(b0)
     
     float m_Time;
     float3 m_CameraPosition;
+    
+    int m_OceanTextureSize; // Size of the ocean texture (e.g., 256x256)
+    float m_PatchSize; // Size of the ocean patch in world units
+    float2 m_Padding; // Padding to align to 16 bytes
 }
 
 PatchTess ConstantHS(InputPatch<HSInput, 4> patch, uint patchID : SV_PrimitiveID)
@@ -72,7 +74,6 @@ HSOutput Main(
     HSOutput output = (HSOutput) 0;
     
     output.Position = p[i].Position;
-    output.Normal = p[i].Normal;
     output.Color = p[i].Color;
 
     return output;

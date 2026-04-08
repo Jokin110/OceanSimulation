@@ -2,12 +2,11 @@
 struct PSInput
 {
     float3 WorldPosition : TEXCOORD0;
-    float3 NormalWS : NORMAL;
+    float2 UVs : TEXCOORD1;
     float3 ViewVector : TEXCOORD2;
     float3 EyePos : TEXCOORD3;
-    float Jacobian : JACOBIAN;
     float3 Color : COLOR;
-    float4 Position : SV_Position;
+    float4 Position : SV_POSITION;
 };
 
 struct PSOutput
@@ -34,7 +33,7 @@ cbuffer RenderingValuesBuffer : register(b0)
     float m_kDiffuse;
 }
 
-Texture2D InitialSpectrum : register(t0);
+Texture2D SlopeTexture : register(t0);
 SamplerState LinearSampler : register(s0);
 
 float3 TessendorfLighting(float3 normal, float3 lightDir, float3 viewDir, float3 skyColor, float3 P, float3 E, float nSnell = 1.33, float kDiffuse = 0.0)
@@ -74,7 +73,9 @@ PSOutput Main(PSInput input)
     
     float3 lightDir = normalize(m_LightDirection);
     
-    float3 normal = normalize(input.NormalWS);
+    float4 slopeSample = SlopeTexture.SampleLevel(LinearSampler, input.UVs, 0);
+    
+    float3 normal = normalize(slopeSample.xyz);
     float3 viewDir = normalize(input.ViewVector);
     float3 halfVector = normalize(-lightDir + viewDir);
     
@@ -88,15 +89,18 @@ PSOutput Main(PSInput input)
     if (input.Position.x > 1920 * 0.45)
         finalColor = TessendorfLighting(normal, lightDir, viewDir, m_LightColor, input.WorldPosition, input.EyePos, m_Snell, m_kDiffuse);
     
-    finalColor = lerp(finalColor, m_FoamColor, clamp((m_FoamBias - input.Jacobian) / m_FoamBias, 0, 1));
+    finalColor = lerp(finalColor, m_FoamColor, clamp((m_FoamBias - slopeSample.a) / m_FoamBias, 0, 1));
     
     finalColor += m_FogColor * saturate(length(input.WorldPosition - input.EyePos) / m_FogDistance);
     
     output.Color = float4(finalColor, 1.0);
     
-    output.Color = InitialSpectrum.SampleLevel(LinearSampler, input.Position.xy / float2(1920.0f, 1080.0f) / 0.9f, 0);
+    //if (m_Snell <= 1.5f)
+    //    output.Color = DisplacementTexture.SampleLevel(LinearSampler, input.Position.xy / float2(1920.0f, 1080.0f) / 0.9f, 0);
+    //else
+    //    output.Color = SlopeTexture.SampleLevel(LinearSampler, input.Position.xy / float2(1920.0f, 1080.0f) / 0.9f, 0);
     
-    //output.Color = float4(1.0, 1.0, 1.0, 1.0);
+    //output.Color = float4(normal, 1.0);
     
     return output;
 }

@@ -54,6 +54,9 @@
     <ClInclude Include="include\OceanComputeManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\FFTManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="source\WindowApplication.cpp">
@@ -108,6 +111,9 @@
     <ClCompile Include="imgui\backends\imgui_impl_glfw.cpp">
       <Filter>Source Files\ImGui</Filter>
     </ClCompile>
+    <ClCompile Include="source\FFTManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="assets\shaders\PixelShader.hlsl">
@@ -128,13 +134,16 @@
     <FxCompile Include="assets\shaders\OceanSurfaceVS.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\FFTOceanSurfaceCS.hlsl">
+    <FxCompile Include="assets\shaders\FFTCS.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
     <FxCompile Include="assets\shaders\InitialSpectrumCS.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
     <FxCompile Include="assets\shaders\TimeEvolutionCS.hlsl">
+      <Filter>Resource Files</Filter>
+    </FxCompile>
+    <FxCompile Include="assets\shaders\DisplacementAndSlopeCS.hlsl">
       <Filter>Resource Files</Filter>
     </FxCompile>
   </ItemGroup>

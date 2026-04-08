@@ -1,5 +1,6 @@
 #include "OceanSurface.h"
 #include "CameraManager.h"
+#include "OceanComputeManager.h"
 #include "imgui.h"
 #include <fstream>
 
@@ -50,6 +51,8 @@ void OceanSurface::Update()
 	m_ConstantBufferData.m_ViewProjectionMatrix = XMMatrixMultiply(CameraManager::GetInstance().GetViewMatrix(), CameraManager::GetInstance().GetProjectionMatrix());
 	m_ConstantBufferData.m_Time = TimeManager::GetInstance().GetTime();
 	m_ConstantBufferData.m_CameraPosition = CameraManager::GetInstance().GetCameraPosition();
+	m_ConstantBufferData.m_OceanTextureSize = OceanComputeManager::GetInstance().GetOceanTextureSize();
+	m_ConstantBufferData.m_PatchSize = static_cast<float>(OceanComputeManager::GetInstance().GetOceanPatchSize());
 
 	ImGui::Begin("Ocean Surface Rendering Settings");
 	ImGui::ColorEdit3("Foam Color", (float*)&m_PixelShaderBufferData.m_FoamColor);
@@ -115,15 +118,6 @@ UINT OceanSurface::GetVertexInputLayout(D3D11_INPUT_ELEMENT_DESC*& inputLayout)
 			0
 		},
 		{
-			"NORMAL",
-			0,
-			DXGI_FORMAT_R32G32B32_FLOAT,
-			0,
-			offsetof(VertexData, normal),
-			D3D11_INPUT_PER_VERTEX_DATA,
-			0
-		},
-		{
 			"COLOR",
 			0,
 			DXGI_FORMAT_R32G32B32_FLOAT,
@@ -144,10 +138,13 @@ void OceanSurface::GenerateMesh()
 	m_Vertices.clear();
 	m_Indices.clear();
 
-	int widthVertices = 128;
-	int depthVertices = 128;
+	int textureSize = OceanComputeManager::GetInstance().GetOceanTextureSize();
+	float patchSize = OceanComputeManager::GetInstance().GetOceanPatchSize();
 
-	float separation = 10.0f;
+	int widthVertices = textureSize;
+	int depthVertices = textureSize;
+
+	float separation = patchSize / (float) textureSize;
 
 	float startX = -((widthVertices - 1) * separation) / 2.0f;
 	float startZ = -((depthVertices - 1) * separation) / 2.0f;
@@ -161,8 +158,6 @@ void OceanSurface::GenerateMesh()
 			vertex.position.x = startX + x * separation;
 			vertex.position.y = 0.0f;
 			vertex.position.z = startZ + z * separation;
-
-			vertex.normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
 
 			vertex.color = XMFLOAT3(0.0f, 0.41f, 0.58f);
 
