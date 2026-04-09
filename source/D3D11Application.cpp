@@ -170,6 +170,16 @@ bool D3D11Application::InitializeManagers()
         return false;
     }
 
+    if (!OceanComputeManager::Initialize())
+    {
+        return false;
+    }
+
+    if (!FFTManager::Initialize(OceanComputeManager::GetInstance().GetOceanTextureSize()))
+    {
+        return false;
+    }
+
     if (!CameraManager::Initialize())
     {
         return false;
@@ -178,22 +188,17 @@ bool D3D11Application::InitializeManagers()
     if (!ObjectManager::Initialize())
     {
         return false;
-	}
+    }
 
     if (!SceneManager::Initialize())
     {
         return false;
     }
 
-    if (!OceanComputeManager::Initialize())
+    if (!ObjectManager::GetInstance().InitializeObjects())
     {
         return false;
-	}
-
-    if (!FFTManager::Initialize(OceanComputeManager::GetInstance().GetOceanTextureSize()))
-    {
-        return false;
-	}
+    }
 
     return true;
 }
@@ -322,14 +327,7 @@ bool D3D11Application::Load()
 
     OceanComputeManager::GetInstance().Start();
 
-    if (ObjectManager::GetInstance().InitializeObjects())
-    {
-		ObjectManager::GetInstance().Start();
-    }
-    else
-    {
-        return false;
-    }
+    ObjectManager::GetInstance().Start();
 
     return true;
 }
@@ -447,12 +445,14 @@ void D3D11Application::Render()
 
             ID3D11ShaderResourceView* oceanSRV[1] = { OceanComputeManager::GetInstance().GetDisplacementSRV() };
             m_d3dDeviceContext->DSSetShaderResources(0, 1, oceanSRV);
+            m_d3dDeviceContext->DSSetSamplers(0, 1, &object->GetSamplerState());
         }
 
         m_d3dDeviceContext->PSSetShader(object->GetPixelShader(), nullptr, 0);
 
         ID3D11ShaderResourceView* pixelShaderSRV[1] = { OceanComputeManager::GetInstance().GetSlopeSRV() };
         m_d3dDeviceContext->PSSetShaderResources(0, 1, pixelShaderSRV);
+		m_d3dDeviceContext->PSSetSamplers(0, 1, &object->GetSamplerState());
 
         if (object->GetUpdatePixelShaderBuffer())
         {

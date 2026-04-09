@@ -77,7 +77,7 @@ private:
     static OceanComputeManager* m_Instance;
 
 	UINT m_OceanTextureSize = 1024; // Example grid size for the ocean surface
-	float m_OceanPatchSize = 1024.0f; // Size of the ocean patch in world units
+	float m_OceanPatchSize = 100.0f; // Size of the ocean patch in world units
 
 	float m_DensityOfWater = 1000.0f; // kg/m^3
 	float m_SurfaceTension = 0.074f; // N/m

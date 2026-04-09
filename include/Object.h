@@ -33,6 +33,8 @@ public:
 	virtual ID3D11DomainShader*& GetDomainShader() = 0;
 	virtual D3D11_PRIMITIVE_TOPOLOGY GetTopology() = 0;
 
+	virtual ID3D11SamplerState*& GetSamplerState() = 0;
+
 	virtual ID3D11Buffer*& GetConstantBuffers() = 0;
 	virtual ID3D11Buffer*& GetPixelShaderBuffers() = 0;
 
@@ -44,6 +46,13 @@ public:
 	virtual UINT GetVertexStride() = 0;
 
 	virtual bool UseTessellation() = 0;
+
+	virtual Vector3 GetPosition() = 0;
+	virtual void SetPosition(const Vector3& position) = 0;
+	virtual Vector3 GetRotation() = 0;
+	virtual void SetRotation(const Vector3& rotation) = 0;
+	virtual Vector3 GetScale() = 0;
+	virtual void SetScale(const Vector3& scale) = 0;
 };
 
 template<typename VertexData, typename ConstantBufferData, typename PixelShaderBufferData>
@@ -72,6 +81,8 @@ public:
 	ID3D11DomainShader*& GetDomainShader() { return m_d3dDomainShader; }
 	D3D11_PRIMITIVE_TOPOLOGY GetTopology() { return m_Topology; }
 
+	ID3D11SamplerState*& GetSamplerState() { return m_d3dSamplerState; }
+
 	ID3D11Buffer*& GetConstantBuffers() { return m_d3dConstantBuffers; }
 	ID3D11Buffer*& GetPixelShaderBuffers() { return m_d3dPixelShaderBuffers; }
 
@@ -83,6 +94,13 @@ public:
 	UINT GetVertexStride() { return sizeof(VertexData); }
 
 	bool UseTessellation() { return !m_HullShaderFile.empty() && !m_DomainShaderFile.empty(); }
+
+	Vector3 GetPosition() { return m_Position; }
+	void SetPosition(const Vector3& position) { m_Position = position; }
+	Vector3 GetRotation() { return m_Rotation; }
+	void SetRotation(const Vector3& rotation) { m_Rotation = rotation; }
+	Vector3 GetScale() { return m_Scale; }
+	void SetScale(const Vector3& scale) { m_Scale = scale; }
 
 protected:
 	string m_Name;
@@ -103,6 +121,8 @@ protected:
 
 	vector<VertexData> m_Vertices;
 	vector<int> m_Indices;
+
+	ID3D11SamplerState* m_d3dSamplerState = nullptr;
 
 	ConstantBufferData m_ConstantBufferData;
 	PixelShaderBufferData m_PixelShaderBufferData;
@@ -161,6 +181,8 @@ Object<VertexData, ConstantBufferData, PixelShaderBufferData>::Object()
 	m_d3dConstantBuffers = nullptr;
 	m_d3dPixelShaderBuffers = nullptr;
 
+	m_d3dSamplerState = nullptr;
+
 	m_ConstantBufferData = {};
 	m_PixelShaderBufferData = {};
 
@@ -209,6 +231,8 @@ Object<VertexData, ConstantBufferData, PixelShaderBufferData>::~Object()
 	SafeRelease(m_d3dHullShader);
 	SafeRelease(m_d3dDomainShader);
 	SafeRelease(m_d3dConstantBuffers);
+
+	SafeRelease(m_d3dSamplerState);
 
 	m_Vertices.clear();
 	m_Indices.clear();
@@ -338,6 +362,29 @@ bool Object<VertexData, ConstantBufferData, PixelShaderBufferData>::Initialize()
 		&m_d3dPixelShaderBuffers)))
 	{
 		cout << "D3D11: Failed to create per-object pixel shader buffer\n";
+		return false;
+	}
+
+	D3D11_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 1;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+	samplerDesc.BorderColor[0] = 0.0f;
+	samplerDesc.BorderColor[1] = 0.0f;
+	samplerDesc.BorderColor[2] = 0.0f;
+	samplerDesc.BorderColor[3] = 0.0f;
+	samplerDesc.MinLOD = 0.0f;
+	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	if (FAILED(D3D11Application::GetInstance().GetDevice()->CreateSamplerState(
+		&samplerDesc,
+		&m_d3dSamplerState)))
+	{
+		cout << "D3D11: Failed to create sampler state\n";
 		return false;
 	}
 

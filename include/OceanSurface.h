@@ -60,6 +60,8 @@ public:
 	void Start() override;
 	void Update() override;
 
+	void UpdatePixelShaderBuffer(const PerObjectPixelShaderBufferData& pixelShaderBufferData);
+
 protected:
 	UINT GetVertexInputLayout(D3D11_INPUT_ELEMENT_DESC*& inputLayout) override;
 

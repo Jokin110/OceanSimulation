@@ -73,7 +73,7 @@ PSOutput Main(PSInput input)
     
     float3 lightDir = normalize(m_LightDirection);
     
-    float4 slopeSample = SlopeTexture.SampleLevel(LinearSampler, input.UVs, 0);
+    float4 slopeSample = SlopeTexture.Sample(LinearSampler, input.UVs);
     
     float3 normal = normalize(slopeSample.xyz);
     float3 viewDir = normalize(input.ViewVector);
@@ -86,8 +86,8 @@ PSOutput Main(PSInput input)
     
     float3 finalColor = ambientLight + diffuseLight * input.Color + specularLight * fresnel;
     
-    if (input.Position.x > 1920 * 0.45)
-        finalColor = TessendorfLighting(normal, lightDir, viewDir, m_LightColor, input.WorldPosition, input.EyePos, m_Snell, m_kDiffuse);
+    //if (input.Position.x > 1920 * 0.45)
+    //    finalColor = TessendorfLighting(normal, lightDir, viewDir, m_LightColor, input.WorldPosition, input.EyePos, m_Snell, m_kDiffuse);
     
     finalColor = lerp(finalColor, m_FoamColor, clamp((m_FoamBias - slopeSample.a) / m_FoamBias, 0, 1));
     

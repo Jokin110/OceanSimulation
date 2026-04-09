@@ -120,7 +120,7 @@ DSOutput Main(PatchTess patchTess, float2 uv : SV_DomainLocation, const OutputPa
     
     float3 flatWorldPos = mul(float4(localPos, 1.0), m_WorldMatrix).xyz;
     
-    output.UVs = (flatWorldPos.xz / m_OceanTextureSize + 0.5f) % 1.0f;
+    output.UVs = flatWorldPos.xz / m_PatchSize;
     
     // Sample the FFT texture you generated in the Compute Shader
     float4 displacementData = DisplacementTexture.SampleLevel(LinearSampler, output.UVs, 0);
