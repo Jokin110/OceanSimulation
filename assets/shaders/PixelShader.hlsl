@@ -2,9 +2,9 @@
 struct PSInput
 {
     float3 WorldPosition : TEXCOORD0;
-    float2 UVs : TEXCOORD1;
-    float3 ViewVector : TEXCOORD2;
-    float3 EyePos : TEXCOORD3;
+    float2 UVs[4] : TEXCOORD1;
+    float3 ViewVector : TEXCOORD5;
+    float3 EyePos : TEXCOORD6;
     float3 Color : COLOR;
     float4 Position : SV_POSITION;
 };
@@ -21,9 +21,9 @@ cbuffer RenderingValuesBuffer : register(b0)
     float3 m_LightColor;
     float m_AmbientLightIntensity;
     float3 m_LightDirection;
-    float m_Padding0;
+    float m_DecayFactor;
     float3 m_SpecularColor;
-    float m_Padding1;
+    float m_Padding;
     float3 m_FogColor;
     float m_FogDistance;
     
@@ -33,7 +33,7 @@ cbuffer RenderingValuesBuffer : register(b0)
     float m_kDiffuse;
 }
 
-Texture2D SlopeTexture : register(t0);
+Texture2D SlopeTextureCascade[4] : register(t0);
 SamplerState LinearSampler : register(s0);
 
 float3 TessendorfLighting(float3 normal, float3 lightDir, float3 viewDir, float3 skyColor, float3 P, float3 E, float nSnell = 1.33, float kDiffuse = 0.0)
@@ -73,9 +73,27 @@ PSOutput Main(PSInput input)
     
     float3 lightDir = normalize(m_LightDirection);
     
-    float4 slopeSample = SlopeTexture.Sample(LinearSampler, input.UVs);
+    float2 totalSlope = float2(0.0f, 0.0f);
+    float totalFoam = 0.0f;
+
+    for (int i = 0; i < 4; i++)
+    {
+        float4 slopeSample = SlopeTextureCascade[i].Sample(LinearSampler, input.UVs[i]);
     
-    float3 normal = normalize(slopeSample.xyz);
+        // Extract the raw spatial slope from the Normal vector (slope = -N.xz / N.y)
+        totalSlope.x += -(slopeSample.x / slopeSample.y);
+        totalSlope.y += -(slopeSample.z / slopeSample.y);
+    
+        totalFoam += slopeSample.a;
+    }
+
+    // Reconstruct the final normal from the combined slopes
+    float3 normal = normalize(float3(-totalSlope.x, 1.0f, -totalSlope.y));
+
+    // Calculate final foam
+    float foam = saturate(totalFoam);
+    
+    //float3 normal = normalize(slopeSample.xyz);
     float3 viewDir = normalize(input.ViewVector);
     float3 halfVector = normalize(-lightDir + viewDir);
     
@@ -89,7 +107,9 @@ PSOutput Main(PSInput input)
     //if (input.Position.x > 1920 * 0.45)
     //    finalColor = TessendorfLighting(normal, lightDir, viewDir, m_LightColor, input.WorldPosition, input.EyePos, m_Snell, m_kDiffuse);
     
-    finalColor = lerp(finalColor, m_FoamColor, clamp((m_FoamBias - slopeSample.a) / m_FoamBias, 0, 1));
+    //float foam = saturate(slopeSample.a);
+    
+    finalColor = lerp(finalColor, m_FoamColor, foam); //clamp((m_FoamBias - slopeSample.a) / m_FoamBias, 0, 1));
     
     finalColor += m_FogColor * saturate(length(input.WorldPosition - input.EyePos) / m_FogDistance);
     

@@ -5,42 +5,48 @@
 #include "imgui.h"
 #include "TimeManager.h"
 #include "FFTManager.h"
+#include "SceneManager.h"
+
+#define PI 3.14159265358979323846f
 
 OceanComputeManager* OceanComputeManager::m_Instance = nullptr;
 
 OceanComputeManager::OceanComputeManager()
 {
-	m_InitialSpectrumTexture = nullptr;
-    m_InitialSpectrumUAV = nullptr;
-	m_InitialSpectrumSRV = nullptr;
+    for (int i = 0; i < m_CascadeNumber; i++)
+    {
+        m_InitialSpectrumTexture[i] = nullptr;
+        m_InitialSpectrumUAV[i] = nullptr;
+        m_InitialSpectrumSRV[i] = nullptr;
 
-    m_XYDisplacementTexture = nullptr;
-    m_XYDisplacementUAV = nullptr;
-    m_XYDisplacementSRV = nullptr;
-	m_XYDisplacementPingPongTexture = nullptr;
-	m_XYDisplacementPingPongUAV = nullptr;
-    m_ZDisplacementXXDerivativeTexture = nullptr;
-    m_ZDisplacementXXDerivativeUAV = nullptr;
-    m_ZDisplacementXXDerivativeSRV = nullptr;
-	m_ZDisplacementXXDerivativePingPongTexture = nullptr;
-	m_ZDisplacementXXDerivativePingPongUAV = nullptr;
-    m_XZYXDerivativeTexture = nullptr;
-    m_XZYXDerivativeUAV = nullptr;
-    m_XZYXDerivativeSRV = nullptr;
-	m_XZYXDerivativePingPongTexture = nullptr;
-	m_XZYXDerivativePingPongUAV = nullptr;
-    m_YZZZDerivativeTexture = nullptr;
-    m_YZZZDerivativeUAV = nullptr;
-    m_YZZZDerivativeSRV = nullptr;
-	m_YZZZDerivativePingPongTexture = nullptr;
-	m_YZZZDerivativePingPongUAV = nullptr;
+        m_XYDisplacementTexture[i] = nullptr;
+        m_XYDisplacementUAV[i] = nullptr;
+        m_XYDisplacementSRV[i] = nullptr;
+        m_XYDisplacementPingPongTexture[i] = nullptr;
+        m_XYDisplacementPingPongUAV[i] = nullptr;
+        m_ZDisplacementXXDerivativeTexture[i] = nullptr;
+        m_ZDisplacementXXDerivativeUAV[i] = nullptr;
+        m_ZDisplacementXXDerivativeSRV[i] = nullptr;
+        m_ZDisplacementXXDerivativePingPongTexture[i] = nullptr;
+        m_ZDisplacementXXDerivativePingPongUAV[i] = nullptr;
+        m_XZYXDerivativeTexture[i] = nullptr;
+        m_XZYXDerivativeUAV[i] = nullptr;
+        m_XZYXDerivativeSRV[i] = nullptr;
+        m_XZYXDerivativePingPongTexture[i] = nullptr;
+        m_XZYXDerivativePingPongUAV[i] = nullptr;
+        m_YZZZDerivativeTexture[i] = nullptr;
+        m_YZZZDerivativeUAV[i] = nullptr;
+        m_YZZZDerivativeSRV[i] = nullptr;
+        m_YZZZDerivativePingPongTexture[i] = nullptr;
+        m_YZZZDerivativePingPongUAV[i] = nullptr;
 
-	m_DisplacementTexture = nullptr;
-	m_DisplacementUAV = nullptr;
-	m_DisplacementSRV = nullptr;
-	m_SlopeTexture = nullptr;
-	m_SlopeUAV = nullptr;
-	m_SlopeSRV = nullptr;
+        m_DisplacementTexture[i] = nullptr;
+        m_DisplacementUAV[i] = nullptr;
+        m_DisplacementSRV[i] = nullptr;
+        m_SlopeTexture[i] = nullptr;
+        m_SlopeUAV[i] = nullptr;
+        m_SlopeSRV[i] = nullptr;
+    }
 
 	m_InitialSpectrumComputeShader = nullptr;
 	m_TimeEvolutionComputeShader = nullptr;
@@ -48,44 +54,49 @@ OceanComputeManager::OceanComputeManager()
 
     m_d3dOceanSimulationSettingsBuffer = nullptr;
 	m_d3dTimeEvolutionBuffer = nullptr;
+	m_d3dDisplacementAndSlopeBuffer = nullptr;
 
     m_OceanSimulationSettingsBufferData = {};
 	m_TimeEvolutionBufferData = {};
+	m_DisplacementAndSlopeBufferData = {};
 }
 
 OceanComputeManager::~OceanComputeManager()
 {
-    if (m_InitialSpectrumUAV) m_InitialSpectrumUAV->Release();
-    if (m_InitialSpectrumSRV) m_InitialSpectrumSRV->Release();
-    if (m_InitialSpectrumTexture) m_InitialSpectrumTexture->Release();
+    for (int i = 0; i < m_CascadeNumber; i++)
+    {
+        if (m_InitialSpectrumUAV[i]) m_InitialSpectrumUAV[i]->Release();
+        if (m_InitialSpectrumSRV[i]) m_InitialSpectrumSRV[i]->Release();
+        if (m_InitialSpectrumTexture[i]) m_InitialSpectrumTexture[i]->Release();
 
-	if (m_XYDisplacementSRV) m_XYDisplacementSRV->Release();
-	if (m_XYDisplacementUAV) m_XYDisplacementUAV->Release();
-	if (m_XYDisplacementTexture) m_XYDisplacementTexture->Release();
-	if (m_XYDisplacementPingPongUAV) m_XYDisplacementPingPongUAV->Release();
-	if (m_XYDisplacementPingPongTexture) m_XYDisplacementPingPongTexture->Release();
-	if (m_ZDisplacementXXDerivativeSRV) m_ZDisplacementXXDerivativeSRV->Release();
-	if (m_ZDisplacementXXDerivativeUAV) m_ZDisplacementXXDerivativeUAV->Release();
-	if (m_ZDisplacementXXDerivativeTexture) m_ZDisplacementXXDerivativeTexture->Release();
-	if (m_ZDisplacementXXDerivativePingPongUAV) m_ZDisplacementXXDerivativePingPongUAV->Release();
-	if (m_ZDisplacementXXDerivativePingPongTexture) m_ZDisplacementXXDerivativePingPongTexture->Release();
-	if (m_XZYXDerivativeSRV) m_XZYXDerivativeSRV->Release();
-	if (m_XZYXDerivativeUAV) m_XZYXDerivativeUAV->Release();
-	if (m_XZYXDerivativeTexture) m_XZYXDerivativeTexture->Release();
-	if (m_XZYXDerivativePingPongUAV) m_XZYXDerivativePingPongUAV->Release();
-	if (m_XZYXDerivativePingPongTexture) m_XZYXDerivativePingPongTexture->Release();
-	if (m_YZZZDerivativeSRV) m_YZZZDerivativeSRV->Release();
-	if (m_YZZZDerivativeUAV) m_YZZZDerivativeUAV->Release();
-	if (m_YZZZDerivativeTexture) m_YZZZDerivativeTexture->Release();
-	if (m_YZZZDerivativePingPongUAV) m_YZZZDerivativePingPongUAV->Release();
-	if (m_YZZZDerivativePingPongTexture) m_YZZZDerivativePingPongTexture->Release();
+        if (m_XYDisplacementSRV[i]) m_XYDisplacementSRV[i]->Release();
+        if (m_XYDisplacementUAV[i]) m_XYDisplacementUAV[i]->Release();
+        if (m_XYDisplacementTexture[i]) m_XYDisplacementTexture[i]->Release();
+        if (m_XYDisplacementPingPongUAV[i]) m_XYDisplacementPingPongUAV[i]->Release();
+        if (m_XYDisplacementPingPongTexture[i]) m_XYDisplacementPingPongTexture[i]->Release();
+        if (m_ZDisplacementXXDerivativeSRV[i]) m_ZDisplacementXXDerivativeSRV[i]->Release();
+        if (m_ZDisplacementXXDerivativeUAV[i]) m_ZDisplacementXXDerivativeUAV[i]->Release();
+        if (m_ZDisplacementXXDerivativeTexture[i]) m_ZDisplacementXXDerivativeTexture[i]->Release();
+        if (m_ZDisplacementXXDerivativePingPongUAV[i]) m_ZDisplacementXXDerivativePingPongUAV[i]->Release();
+        if (m_ZDisplacementXXDerivativePingPongTexture[i]) m_ZDisplacementXXDerivativePingPongTexture[i]->Release();
+        if (m_XZYXDerivativeSRV[i]) m_XZYXDerivativeSRV[i]->Release();
+        if (m_XZYXDerivativeUAV[i]) m_XZYXDerivativeUAV[i]->Release();
+        if (m_XZYXDerivativeTexture[i]) m_XZYXDerivativeTexture[i]->Release();
+        if (m_XZYXDerivativePingPongUAV[i]) m_XZYXDerivativePingPongUAV[i]->Release();
+        if (m_XZYXDerivativePingPongTexture[i]) m_XZYXDerivativePingPongTexture[i]->Release();
+        if (m_YZZZDerivativeSRV[i]) m_YZZZDerivativeSRV[i]->Release();
+        if (m_YZZZDerivativeUAV[i]) m_YZZZDerivativeUAV[i]->Release();
+        if (m_YZZZDerivativeTexture[i]) m_YZZZDerivativeTexture[i]->Release();
+        if (m_YZZZDerivativePingPongUAV[i]) m_YZZZDerivativePingPongUAV[i]->Release();
+        if (m_YZZZDerivativePingPongTexture[i]) m_YZZZDerivativePingPongTexture[i]->Release();
 
-	if (m_DisplacementSRV) m_DisplacementSRV->Release();
-	if (m_DisplacementUAV) m_DisplacementUAV->Release();
-	if (m_DisplacementTexture) m_DisplacementTexture->Release();
-	if (m_SlopeSRV) m_SlopeSRV->Release();
-	if (m_SlopeUAV) m_SlopeUAV->Release();
-	if (m_SlopeTexture) m_SlopeTexture->Release();
+        if (m_DisplacementSRV[i]) m_DisplacementSRV[i]->Release();
+        if (m_DisplacementUAV[i]) m_DisplacementUAV[i]->Release();
+        if (m_DisplacementTexture[i]) m_DisplacementTexture[i]->Release();
+        if (m_SlopeSRV[i]) m_SlopeSRV[i]->Release();
+        if (m_SlopeUAV[i]) m_SlopeUAV[i]->Release();
+        if (m_SlopeTexture[i]) m_SlopeTexture[i]->Release();
+    }
 
     if (m_InitialSpectrumComputeShader) m_InitialSpectrumComputeShader->Release();
 	if (m_TimeEvolutionComputeShader) m_TimeEvolutionComputeShader->Release();
@@ -93,6 +104,7 @@ OceanComputeManager::~OceanComputeManager()
 
 	if (m_d3dOceanSimulationSettingsBuffer) m_d3dOceanSimulationSettingsBuffer->Release();
 	if (m_d3dTimeEvolutionBuffer) m_d3dTimeEvolutionBuffer->Release();
+	if (m_d3dDisplacementAndSlopeBuffer) m_d3dDisplacementAndSlopeBuffer->Release();
 
 	if (m_Instance)
 	{
@@ -118,6 +130,13 @@ bool OceanComputeManager::Initialize()
 			cout << "Failed to create compute shaders for ocean simulation." << endl;
             return false;
 		}
+
+        m_Instance->m_FrequencyLimits[0] = 0.0f;
+
+        for (int i = 1; i < m_CascadeNumber; i++)
+        {
+			m_Instance->m_FrequencyLimits[i] = PI * m_Instance->m_OceanTextureSize / m_Instance->m_OceanPatchSize[i];
+        }
 
 		return true;
 	}
@@ -196,27 +215,32 @@ void OceanComputeManager::GenerateInitialSpectrum(bool initial)
 
     InitializeOceanSimulationSettings(initial);
 
-	m_OceanSimulationSettingsBufferData.m_OceanTextureSize = m_OceanTextureSize;
-	m_OceanSimulationSettingsBufferData.m_PatchSize = m_OceanPatchSize;
+    m_OceanSimulationSettingsBufferData.m_OceanTextureSize = m_OceanTextureSize;
 
     m_OceanSimulationSettingsBufferData.m_PeakFrequency = max(22.0f * m_OceanSimulationSettingsBufferData.m_GravitationalConstant * m_OceanSimulationSettingsBufferData.m_GravitationalConstant / (m_OceanSimulationSettingsBufferData.m_AverageWindSpeed * m_OceanSimulationSettingsBufferData.m_FetchLength), 0.01f);
-	m_OceanSimulationSettingsBufferData.m_Alpha = 0.076f * pow(m_OceanSimulationSettingsBufferData.m_AverageWindSpeed * m_OceanSimulationSettingsBufferData.m_AverageWindSpeed / (m_OceanSimulationSettingsBufferData.m_GravitationalConstant * m_OceanSimulationSettingsBufferData.m_FetchLength), 0.22f);
-	m_OceanSimulationSettingsBufferData.m_WindAngle = m_OceanSimulationSettingsBufferData.m_WindDirection * (3.14159265f / 180.0f); // Convert to radians
+    m_OceanSimulationSettingsBufferData.m_Alpha = 0.076f * pow(m_OceanSimulationSettingsBufferData.m_AverageWindSpeed * m_OceanSimulationSettingsBufferData.m_AverageWindSpeed / (m_OceanSimulationSettingsBufferData.m_GravitationalConstant * m_OceanSimulationSettingsBufferData.m_FetchLength), 0.22f);
+    m_OceanSimulationSettingsBufferData.m_WindAngle = m_OceanSimulationSettingsBufferData.m_WindDirection * (PI / 180.0f); // Convert to radians
 
     m_OceanSimulationSettingsBufferData.m_RandomSeed = rand();
-	m_OceanSimulationSettingsBufferData.m_Time = TimeManager::GetInstance().GetTime();
 
-    context->UpdateSubresource(m_d3dOceanSimulationSettingsBuffer, 0, nullptr, &m_OceanSimulationSettingsBufferData, 0, 0);
-    context->CSSetConstantBuffers(0, 1, &m_d3dOceanSimulationSettingsBuffer);
+    for (int i = 0; i < m_CascadeNumber; i++)
+    {
+        m_OceanSimulationSettingsBufferData.m_PatchSize = m_OceanPatchSize[i];
+        m_OceanSimulationSettingsBufferData.m_LowPassFilter = m_FrequencyLimits[i];
+		m_OceanSimulationSettingsBufferData.m_CascadeAmplitude = m_CascadeAmplitudes[i];
 
-    context->CSSetUnorderedAccessViews(0, 1, &m_InitialSpectrumUAV, nullptr);
+        context->UpdateSubresource(m_d3dOceanSimulationSettingsBuffer, 0, nullptr, &m_OceanSimulationSettingsBufferData, 0, 0);
+        context->CSSetConstantBuffers(0, 1, &m_d3dOceanSimulationSettingsBuffer);
 
-    UINT groupsX = m_OceanTextureSize / 16;
-    UINT groupsY = m_OceanTextureSize / 16;
-    context->Dispatch(groupsX, groupsY, 1);
+        context->CSSetUnorderedAccessViews(0, 1, &m_InitialSpectrumUAV[i], nullptr);
 
-    ID3D11UnorderedAccessView* nullUAV[1] = { nullptr };
-    context->CSSetUnorderedAccessViews(0, 1, nullUAV, nullptr);
+        UINT groupsX = m_OceanTextureSize / 16;
+        UINT groupsY = m_OceanTextureSize / 16;
+        context->Dispatch(groupsX, groupsY, 1);
+
+        ID3D11UnorderedAccessView* nullUAV[1] = { nullptr };
+        context->CSSetUnorderedAccessViews(0, 1, nullUAV, nullptr);
+    }
 }
 
 void OceanComputeManager::UpdateTimeEvolutionTextures()
@@ -226,37 +250,44 @@ void OceanComputeManager::UpdateTimeEvolutionTextures()
     context->CSSetShader(m_TimeEvolutionComputeShader, nullptr, 0);
 
 	m_TimeEvolutionBufferData.m_OceanTextureSize = m_OceanTextureSize;
-    m_TimeEvolutionBufferData.m_PatchSize = m_OceanPatchSize;
     m_TimeEvolutionBufferData.m_DensityOfWater = m_OceanSimulationSettingsBufferData.m_DensityOfWater;
     m_TimeEvolutionBufferData.m_SurfaceTension = m_OceanSimulationSettingsBufferData.m_SurfaceTension;
     m_TimeEvolutionBufferData.m_GravitationalConstant = m_OceanSimulationSettingsBufferData.m_GravitationalConstant;
     m_TimeEvolutionBufferData.m_OceanDepth = m_OceanSimulationSettingsBufferData.m_OceanDepth;
     m_TimeEvolutionBufferData.m_Time = TimeManager::GetInstance().GetTime();
 
-    context->UpdateSubresource(m_d3dTimeEvolutionBuffer, 0, nullptr, &m_TimeEvolutionBufferData, 0, 0);
-    context->CSSetConstantBuffers(0, 1, &m_d3dTimeEvolutionBuffer);
+    for (int i = 0; i < m_CascadeNumber; i++)
+    {
+        m_TimeEvolutionBufferData.m_PatchSize = m_OceanPatchSize[i];
 
-    context->CSSetShaderResources(0, 1, &m_InitialSpectrumSRV);
-    ID3D11UnorderedAccessView* allUAVs[4] = { m_XYDisplacementUAV, m_ZDisplacementXXDerivativeUAV, m_XZYXDerivativeUAV, m_YZZZDerivativeUAV };
-    context->CSSetUnorderedAccessViews(0, 4, allUAVs, nullptr);
+        context->UpdateSubresource(m_d3dTimeEvolutionBuffer, 0, nullptr, &m_TimeEvolutionBufferData, 0, 0);
+        context->CSSetConstantBuffers(0, 1, &m_d3dTimeEvolutionBuffer);
 
-    UINT groupsX = m_OceanTextureSize / 16;
-    UINT groupsY = m_OceanTextureSize / 16;
-    context->Dispatch(groupsX, groupsY, 1);
+        context->CSSetShaderResources(0, 1, &m_InitialSpectrumSRV[i]);
+        ID3D11UnorderedAccessView* allUAVs[m_CascadeNumber] = { m_XYDisplacementUAV[i], m_ZDisplacementXXDerivativeUAV[i], m_XZYXDerivativeUAV[i], m_YZZZDerivativeUAV[i]};
+        context->CSSetUnorderedAccessViews(0, m_CascadeNumber, allUAVs, nullptr);
 
-    ID3D11UnorderedAccessView* nullUAVs[4] = { nullptr, nullptr, nullptr, nullptr };
-    context->CSSetUnorderedAccessViews(0, 4, nullUAVs, nullptr);
+        UINT groupsX = m_OceanTextureSize / 16;
+        UINT groupsY = m_OceanTextureSize / 16;
+        context->Dispatch(groupsX, groupsY, 1);
 
-    ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
-    context->CSSetShaderResources(0, 1, nullSRV);
+        ID3D11UnorderedAccessView* nullUAVs[m_CascadeNumber] = { nullptr, nullptr, nullptr, nullptr };
+        context->CSSetUnorderedAccessViews(0, m_CascadeNumber, nullUAVs, nullptr);
+
+        ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
+        context->CSSetShaderResources(0, 1, nullSRV);
+    }
 }
 
 void OceanComputeManager::UpdateFFTTextures()
 {
-    FFTManager::GetInstance().ComputeIFFT2D(m_XYDisplacementUAV, m_XYDisplacementPingPongUAV, true, false, true);
-	FFTManager::GetInstance().ComputeIFFT2D(m_ZDisplacementXXDerivativeUAV, m_ZDisplacementXXDerivativePingPongUAV, true, false, true);
-	FFTManager::GetInstance().ComputeIFFT2D(m_XZYXDerivativeUAV, m_XZYXDerivativePingPongUAV, true, false, true);
-	FFTManager::GetInstance().ComputeIFFT2D(m_YZZZDerivativeUAV, m_YZZZDerivativePingPongUAV, true, false, true);
+    for (int i = 0; i < m_CascadeNumber; i++)
+    {
+        FFTManager::GetInstance().ComputeIFFT2D(m_XYDisplacementUAV[i], m_XYDisplacementPingPongUAV[i], true, false, true);
+        FFTManager::GetInstance().ComputeIFFT2D(m_ZDisplacementXXDerivativeUAV[i], m_ZDisplacementXXDerivativePingPongUAV[i], true, false, true);
+        FFTManager::GetInstance().ComputeIFFT2D(m_XZYXDerivativeUAV[i], m_XZYXDerivativePingPongUAV[i], true, false, true);
+        FFTManager::GetInstance().ComputeIFFT2D(m_YZZZDerivativeUAV[i], m_YZZZDerivativePingPongUAV[i], true, false, true);
+    }
 }
 
 void OceanComputeManager::GenerateDisplacementAndSlopeFinalTextures()
@@ -265,21 +296,31 @@ void OceanComputeManager::GenerateDisplacementAndSlopeFinalTextures()
 
     context->CSSetShader(m_DisplacementAndSlopeComputeShader, nullptr, 0);
 
-    ID3D11ShaderResourceView* allSRVs[4] = { m_XYDisplacementSRV, m_ZDisplacementXXDerivativeSRV, m_XZYXDerivativeSRV, m_YZZZDerivativeSRV };
-    context->CSSetShaderResources(0, 4, allSRVs);
+	m_DisplacementAndSlopeBufferData.m_FoamBias = SceneManager::GetInstance().GetFoamBias(); // Example value, adjust as needed
+	m_DisplacementAndSlopeBufferData.m_DecayFactor = SceneManager::GetInstance().GetDecayFactor(); // Example value, adjust as needed
+	m_DisplacementAndSlopeBufferData.m_DeltaTime = TimeManager::GetInstance().GetDeltaTime();
 
-    ID3D11UnorderedAccessView* allUAVs[2] = { m_DisplacementUAV, m_SlopeUAV };
-    context->CSSetUnorderedAccessViews(0, 2, allUAVs, nullptr);
+	context->UpdateSubresource(m_d3dDisplacementAndSlopeBuffer, 0, nullptr, &m_DisplacementAndSlopeBufferData, 0, 0);
+	context->CSSetConstantBuffers(0, 1, &m_d3dDisplacementAndSlopeBuffer);
 
-    UINT groupsX = m_OceanTextureSize / 16;
-    UINT groupsY = m_OceanTextureSize / 16;
+    for (int i = 0; i < m_CascadeNumber; i++)
+    {
+        ID3D11ShaderResourceView* allSRVs[m_CascadeNumber] = { m_XYDisplacementSRV[i], m_ZDisplacementXXDerivativeSRV[i], m_XZYXDerivativeSRV[i], m_YZZZDerivativeSRV[i] };
+        context->CSSetShaderResources(0, m_CascadeNumber, allSRVs);
 
-    context->Dispatch(groupsX, groupsY, 1);
+        ID3D11UnorderedAccessView* allUAVs[2] = { m_DisplacementUAV[i], m_SlopeUAV[i] };
+        context->CSSetUnorderedAccessViews(0, 2, allUAVs, nullptr);
 
-    ID3D11UnorderedAccessView* nullUAVs[2] = { nullptr, nullptr };
-    context->CSSetUnorderedAccessViews(0, 2, nullUAVs, nullptr);
-    ID3D11ShaderResourceView* nullSRVs[4] = { nullptr, nullptr, nullptr, nullptr };
-    context->CSSetShaderResources(0, 4, nullSRVs);
+        UINT groupsX = m_OceanTextureSize / 16;
+        UINT groupsY = m_OceanTextureSize / 16;
+
+        context->Dispatch(groupsX, groupsY, 1);
+
+        ID3D11UnorderedAccessView* nullUAVs[2] = { nullptr, nullptr };
+        context->CSSetUnorderedAccessViews(0, 2, nullUAVs, nullptr);
+        ID3D11ShaderResourceView* nullSRVs[m_CascadeNumber] = { nullptr, nullptr, nullptr, nullptr };
+        context->CSSetShaderResources(0, m_CascadeNumber, nullSRVs);
+    }
 }
 
 void OceanComputeManager::UpdateUI()
@@ -355,19 +396,22 @@ bool OceanComputeManager::CreateTextureAndViews()
     srvDesc.Texture2D.MipLevels = 1;
 
     // Create resources for the initial spectrum
-    if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_InitialSpectrumTexture)))
+    for (int i = 0; i < m_CascadeNumber; i++)
     {
-        return false;
-    }
+        if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_InitialSpectrumTexture[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_InitialSpectrumTexture, &uavDesc, &m_Instance->m_InitialSpectrumUAV)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_InitialSpectrumTexture[i], &uavDesc, &m_Instance->m_InitialSpectrumUAV[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateShaderResourceView(m_Instance->m_InitialSpectrumTexture, &srvDesc, &m_Instance->m_InitialSpectrumSRV)))
-    {
-        return false;
+        if (FAILED(device->CreateShaderResourceView(m_Instance->m_InitialSpectrumTexture[i], &srvDesc, &m_Instance->m_InitialSpectrumSRV[i])))
+        {
+            return false;
+        }
     }
 
     D3D11_BUFFER_DESC constantBufferDesc = {};
@@ -386,104 +430,107 @@ bool OceanComputeManager::CreateTextureAndViews()
     }
 
 	// Create resources for the fft displacement and slope calculation textures
-    if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_XYDisplacementTexture)))
+    for (int i = 0; i < m_CascadeNumber; i++)
     {
-        return false;
-    }
+        if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_XYDisplacementTexture[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_XYDisplacementTexture, &uavDesc, &m_Instance->m_XYDisplacementUAV)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_XYDisplacementTexture[i], &uavDesc, &m_Instance->m_XYDisplacementUAV[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateShaderResourceView(m_Instance->m_XYDisplacementTexture, &srvDesc, &m_Instance->m_XYDisplacementSRV)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateShaderResourceView(m_Instance->m_XYDisplacementTexture[i], &srvDesc, &m_Instance->m_XYDisplacementSRV[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_XYDisplacementPingPongTexture)))
-    {
-        return false;
-	}
+        if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_XYDisplacementPingPongTexture[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_XYDisplacementPingPongTexture, &uavDesc, &m_Instance->m_XYDisplacementPingPongUAV)))
-    {
-        return false;
-	}
+        if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_XYDisplacementPingPongTexture[i], &uavDesc, &m_Instance->m_XYDisplacementPingPongUAV[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_ZDisplacementXXDerivativeTexture)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_ZDisplacementXXDerivativeTexture[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_ZDisplacementXXDerivativeTexture, &uavDesc, &m_Instance->m_ZDisplacementXXDerivativeUAV)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_ZDisplacementXXDerivativeTexture[i], &uavDesc, &m_Instance->m_ZDisplacementXXDerivativeUAV[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateShaderResourceView(m_Instance->m_ZDisplacementXXDerivativeTexture, &srvDesc, &m_Instance->m_ZDisplacementXXDerivativeSRV)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateShaderResourceView(m_Instance->m_ZDisplacementXXDerivativeTexture[i], &srvDesc, &m_Instance->m_ZDisplacementXXDerivativeSRV[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_ZDisplacementXXDerivativePingPongTexture)))
-    {
-        return false;
-	}
+        if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_ZDisplacementXXDerivativePingPongTexture[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_ZDisplacementXXDerivativePingPongTexture, &uavDesc, &m_Instance->m_ZDisplacementXXDerivativePingPongUAV)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_ZDisplacementXXDerivativePingPongTexture[i], &uavDesc, &m_Instance->m_ZDisplacementXXDerivativePingPongUAV[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_XZYXDerivativeTexture)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_XZYXDerivativeTexture[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_XZYXDerivativeTexture, &uavDesc, &m_Instance->m_XZYXDerivativeUAV)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_XZYXDerivativeTexture[i], &uavDesc, &m_Instance->m_XZYXDerivativeUAV[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateShaderResourceView(m_Instance->m_XZYXDerivativeTexture, &srvDesc, &m_Instance->m_XZYXDerivativeSRV)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateShaderResourceView(m_Instance->m_XZYXDerivativeTexture[i], &srvDesc, &m_Instance->m_XZYXDerivativeSRV[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_XZYXDerivativePingPongTexture)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_XZYXDerivativePingPongTexture[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_XZYXDerivativePingPongTexture, &uavDesc, &m_Instance->m_XZYXDerivativePingPongUAV)))
-    {
-        return false;
-	}
+        if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_XZYXDerivativePingPongTexture[i], &uavDesc, &m_Instance->m_XZYXDerivativePingPongUAV[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_YZZZDerivativeTexture)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_YZZZDerivativeTexture[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_YZZZDerivativeTexture, &uavDesc, &m_Instance->m_YZZZDerivativeUAV)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_YZZZDerivativeTexture[i], &uavDesc, &m_Instance->m_YZZZDerivativeUAV[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateShaderResourceView(m_Instance->m_YZZZDerivativeTexture, &srvDesc, &m_Instance->m_YZZZDerivativeSRV)))
-    {
-        return false;
-    }
+        if (FAILED(device->CreateShaderResourceView(m_Instance->m_YZZZDerivativeTexture[i], &srvDesc, &m_Instance->m_YZZZDerivativeSRV[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_YZZZDerivativePingPongTexture)))
-    {
-        return false;
-	}
+        if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_YZZZDerivativePingPongTexture[i])))
+        {
+            return false;
+        }
 
-    if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_YZZZDerivativePingPongTexture, &uavDesc, &m_Instance->m_YZZZDerivativePingPongUAV)))
-    {
-        return false;
+        if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_YZZZDerivativePingPongTexture[i], &uavDesc, &m_Instance->m_YZZZDerivativePingPongUAV[i])))
+        {
+            return false;
+        }
     }
 
     constantBufferDesc = {};
@@ -502,39 +549,57 @@ bool OceanComputeManager::CreateTextureAndViews()
     }
 
 	// Create resources for the final displacement and slope textures
-    if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_DisplacementTexture)))
+    for (int i = 0; i < m_CascadeNumber; i++)
     {
-		cout << "D3D11: Failed to create displacement texture\n";
-        return false;
-	}
+        if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_DisplacementTexture[i])))
+        {
+            cout << "D3D11: Failed to create displacement texture\n";
+            return false;
+        }
 
-    if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_DisplacementTexture, &uavDesc, &m_Instance->m_DisplacementUAV)))
-    {
-		cout << "D3D11: Failed to create displacement UAV\n";
-        return false;
+        if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_DisplacementTexture[i], &uavDesc, &m_Instance->m_DisplacementUAV[i])))
+        {
+            cout << "D3D11: Failed to create displacement UAV\n";
+            return false;
+        }
+
+        if (FAILED(device->CreateShaderResourceView(m_Instance->m_DisplacementTexture[i], &srvDesc, &m_Instance->m_DisplacementSRV[i])))
+        {
+            cout << "D3D11: Failed to create displacement SRV\n";
+            return false;
+        }
+
+        if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_SlopeTexture[i])))
+        {
+            cout << "D3D11: Failed to create slope texture\n";
+            return false;
+        }
+
+        if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_SlopeTexture[i], &uavDesc, &m_Instance->m_SlopeUAV[i])))
+        {
+            cout << "D3D11: Failed to create slope UAV\n";
+            return false;
+        }
+
+        if (FAILED(device->CreateShaderResourceView(m_Instance->m_SlopeTexture[i], &srvDesc, &m_Instance->m_SlopeSRV[i])))
+        {
+            cout << "D3D11: Failed to create slope SRV\n";
+            return false;
+        }
     }
 
-    if (FAILED(device->CreateShaderResourceView(m_Instance->m_DisplacementTexture, &srvDesc, &m_Instance->m_DisplacementSRV)))
-    {
-		cout << "D3D11: Failed to create displacement SRV\n";
-        return false;
-	}
+    constantBufferDesc = {};
+    constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    constantBufferDesc.ByteWidth = sizeof(DisplacementAndSlopeData);
+    constantBufferDesc.CPUAccessFlags = 0;
+    constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 
-    if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_SlopeTexture)))
+    if (FAILED(device->CreateBuffer(
+        &constantBufferDesc,
+        nullptr,
+        &m_Instance->m_d3dDisplacementAndSlopeBuffer)))
     {
-		cout << "D3D11: Failed to create slope texture\n";
-        return false;
-    }
-    
-    if (FAILED(device->CreateUnorderedAccessView(m_Instance->m_SlopeTexture, &uavDesc, &m_Instance->m_SlopeUAV)))
-    {
-		cout << "D3D11: Failed to create slope UAV\n";
-        return false;
-	}
-
-    if (FAILED(device->CreateShaderResourceView(m_Instance->m_SlopeTexture, &srvDesc, &m_Instance->m_SlopeSRV)))
-    {
-		cout << "D3D11: Failed to create slope SRV\n";
+        cout << "D3D11: Failed to create displacement and slope buffer\n";
         return false;
     }
 

@@ -9,6 +9,14 @@ Texture2D<float4> YZZZDerivativeTexture : register(t3);
 RWTexture2D<float4> DisplacementTexture : register(u0);
 RWTexture2D<float4> SlopeTexture : register(u1);
 
+cbuffer DisplacementAndSlopeParams : register(b0)
+{
+    float m_FoamBias;
+    float m_DecayFactor;
+    float m_DeltaTime;
+    float Padding;
+};
+
 [numthreads(16, 16, 1)]
 void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
 {
@@ -39,6 +47,10 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     
     float jacobian = Jxx * Jzz - Jxz * Jxz;
     
+    float foam = saturate(SlopeTexture[uv].a * exp(-m_DecayFactor * m_DeltaTime));
+    foam += jacobian < m_FoamBias ? 1.0f : 0.0f;
+    foam = saturate(foam);
+    
     DisplacementTexture[uv] = float4(xyDisplacement.r, xyDisplacement.b, zDisplacementXXDerivative.r, 0.0f);
-    SlopeTexture[uv] = float4(normal, jacobian);
+    SlopeTexture[uv] = float4(normal, foam);
 }

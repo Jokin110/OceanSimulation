@@ -19,12 +19,17 @@ public:
     void Start();
     void Update();
 
+	float GetFoamBias() const { return m_PixelShaderSettings.m_FoamBias; }
+	float GetDecayFactor() const { return m_PixelShaderSettings.m_DecayFactor; }
+
 private:
     static SceneManager* m_Instance;
 
     PerObjectPixelShaderBufferData m_PixelShaderSettings;
 
-    OceanSurface* m_Ocean[25] = { nullptr};
+	static const int m_OceanSurfaceSideCount = 5; // Number of ocean surfaces along one side of the grid (total surfaces = oceanSurfaceSideCount^2)
+
+    OceanSurface* m_Ocean[m_OceanSurfaceSideCount * m_OceanSurfaceSideCount] = { nullptr};
     //SkyBox m_SkyBox = SkyBox("SkyBox");
 };
 

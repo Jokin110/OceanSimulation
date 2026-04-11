@@ -407,6 +407,8 @@ void D3D11Application::Render()
 {
     constexpr float clearColor[] = { 0.53f, 0.81f, 0.92f, 1.0f };
 
+	const int cascadeSize = OceanComputeManager::GetInstance().m_CascadeNumber;
+
 	ClearScreen(Colors::SkyBlue, 1.0f, 0);
 
     // D3D11 rendering for all objects
@@ -443,15 +445,15 @@ void D3D11Application::Render()
             m_d3dDeviceContext->DSSetShader(object->GetDomainShader(), nullptr, 0);
             m_d3dDeviceContext->DSSetConstantBuffers(0, 1, &object->GetConstantBuffers());
 
-            ID3D11ShaderResourceView* oceanSRV[1] = { OceanComputeManager::GetInstance().GetDisplacementSRV() };
-            m_d3dDeviceContext->DSSetShaderResources(0, 1, oceanSRV);
+            //ID3D11ShaderResourceView* oceanSRV[1] = { OceanComputeManager::GetInstance().GetDisplacementSRV() };
+            m_d3dDeviceContext->DSSetShaderResources(0, cascadeSize, OceanComputeManager::GetInstance().GetDisplacementSRV());
             m_d3dDeviceContext->DSSetSamplers(0, 1, &object->GetSamplerState());
         }
 
         m_d3dDeviceContext->PSSetShader(object->GetPixelShader(), nullptr, 0);
 
-        ID3D11ShaderResourceView* pixelShaderSRV[1] = { OceanComputeManager::GetInstance().GetSlopeSRV() };
-        m_d3dDeviceContext->PSSetShaderResources(0, 1, pixelShaderSRV);
+        //ID3D11ShaderResourceView* pixelShaderSRV[1] = { OceanComputeManager::GetInstance().GetSlopeSRV() };
+        m_d3dDeviceContext->PSSetShaderResources(0, cascadeSize, OceanComputeManager::GetInstance().GetSlopeSRV());
 		m_d3dDeviceContext->PSSetSamplers(0, 1, &object->GetSamplerState());
 
         if (object->GetUpdatePixelShaderBuffer())
@@ -462,9 +464,9 @@ void D3D11Application::Render()
 
         m_d3dDeviceContext->DrawIndexed(object->GetIndexCount(), 0, 0);
 
-        ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
-        m_d3dDeviceContext->DSSetShaderResources(0, 1, nullSRV);
-        m_d3dDeviceContext->PSSetShaderResources(0, 1, nullSRV);
+        ID3D11ShaderResourceView* nullSRV[4] = { nullptr };
+        m_d3dDeviceContext->DSSetShaderResources(0, cascadeSize, nullSRV);
+        m_d3dDeviceContext->PSSetShaderResources(0, cascadeSize, nullSRV);
     }
 
     ImGui::Render();

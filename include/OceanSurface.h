@@ -19,12 +19,11 @@ struct PerObjectConstantBufferData
 	XMMATRIX m_WorldMatrix;
 	XMMATRIX m_InverseTransposeWorldMatrix;
 	XMMATRIX m_ViewProjectionMatrix;
-	float m_Time;
+	
 	XMFLOAT3 m_CameraPosition;
 
 	int m_OceanTextureSize; // Size of the ocean texture (e.g., 256x256)
-	float m_PatchSize; // Size of the ocean patch in world units
-	XMFLOAT2 m_Padding; // Padding to align to 16 bytes
+	float m_PatchSize[4]; // Size of the ocean patch in world units
 };
 
 // Define the structure of the constant buffers for the pixel shader
@@ -35,9 +34,9 @@ struct PerObjectPixelShaderBufferData
 	XMFLOAT3 m_LightColor;
 	float m_AmbientLightIntensity;
 	XMFLOAT3 m_LightDirection;
-	float m_Padding0; // Padding to ensure 16-byte alignment
+	float m_DecayFactor;
 	XMFLOAT3 m_SpecularColor;
-	float m_Padding1; // Padding to ensure 16-byte alignment
+	float m_Padding; // Padding to ensure 16-byte alignment
 	XMFLOAT3 m_FogColor;
 	float m_FogDistance;
 

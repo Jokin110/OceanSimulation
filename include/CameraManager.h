@@ -28,7 +28,7 @@ private:
 
     float m_Speed = 5.0f;
 
-    XMFLOAT3 m_CameraPosition = XMFLOAT3(0.0f, 15.0f, -40.0f);
+    XMFLOAT3 m_CameraPosition = XMFLOAT3(0.0f, 50.0f, -150.0f);
     XMFLOAT3 m_CameraFocusPoint = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
     XMMATRIX m_ViewMatrix;

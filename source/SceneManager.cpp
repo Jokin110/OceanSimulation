@@ -6,13 +6,11 @@ SceneManager* SceneManager::m_Instance = nullptr;
 
 SceneManager::SceneManager()
 {
-	int oceanSurfaceSideCount = 5; // Number of ocean surfaces along one side (total will be oceanSurfaceSideCount^2)
-
-	for (int i = 0; i < oceanSurfaceSideCount * oceanSurfaceSideCount; i++)
+	for (int i = 0; i < m_OceanSurfaceSideCount * m_OceanSurfaceSideCount; i++)
 	{
 		m_Ocean[i] = new OceanSurface("Ocean Surface", L"assets/shaders/OceanSurfaceVS.hlsl", L"assets/shaders/PixelShader.hlsl", L"assets/shaders/OceanSurfaceHS.hlsl", L"assets/shaders/OceanSurfaceDS.hlsl", D3D11_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
 
-		m_Ocean[i]->SetPosition(Vector3((i % oceanSurfaceSideCount - (oceanSurfaceSideCount - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize() - 0.0f), 0.0f, (i / oceanSurfaceSideCount - (oceanSurfaceSideCount - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize() - 0.0f)));
+		m_Ocean[i]->SetPosition(Vector3((i % m_OceanSurfaceSideCount - (m_OceanSurfaceSideCount - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f), 0.0f, (i / m_OceanSurfaceSideCount - (m_OceanSurfaceSideCount - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0]	 - 0.0f)));
 	}
 }
 
@@ -34,6 +32,7 @@ bool SceneManager::Initialize()
 		m_Instance->m_PixelShaderSettings = {};
 		m_Instance->m_PixelShaderSettings.m_FoamColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
 		m_Instance->m_PixelShaderSettings.m_FoamBias = 0.3f;
+		m_Instance->m_PixelShaderSettings.m_DecayFactor = 0.98f;
 		m_Instance->m_PixelShaderSettings.m_LightColor = XMFLOAT3(0.53f, 0.81f, 0.92f);
 		m_Instance->m_PixelShaderSettings.m_AmbientLightIntensity = 0.25f;
 		m_Instance->m_PixelShaderSettings.m_LightDirection = XMFLOAT3(0.0f, -0.5f, -1.0f);
@@ -44,7 +43,7 @@ bool SceneManager::Initialize()
 		m_Instance->m_PixelShaderSettings.m_UpwellingColor = XMFLOAT3(0.1f, 0.3f, 0.4f);
 		m_Instance->m_PixelShaderSettings.m_Snell = 1.33f;
 		m_Instance->m_PixelShaderSettings.m_AirColor = XMFLOAT3(0.1f, 0.1f, 0.1f);
-		m_Instance->m_PixelShaderSettings.m_kDiffuse = 0.01;
+		m_Instance->m_PixelShaderSettings.m_kDiffuse = 0.01f;
 
 		std::ifstream inFile("OceanSettings.bin", std::ios::binary);
 		if (inFile.is_open())
@@ -72,6 +71,7 @@ void SceneManager::Update()
 	ImGui::Begin("Ocean Surface Rendering Settings");
 	ImGui::ColorEdit3("Foam Color", (float*)&m_PixelShaderSettings.m_FoamColor);
 	ImGui::SliderFloat("Foam Bias", &m_PixelShaderSettings.m_FoamBias, 0.0f, 1.0f);
+	ImGui::SliderFloat("Decay Factor", &m_PixelShaderSettings.m_DecayFactor, 0.0f, 1.0f);
 	ImGui::ColorEdit3("Light Color", (float*)&m_PixelShaderSettings.m_LightColor);
 	ImGui::SliderFloat("Ambient Light Intensity", &m_PixelShaderSettings.m_AmbientLightIntensity, 0.0f, 1.0f);
 	ImGui::SliderFloat3("Light Direction", (float*)&m_PixelShaderSettings.m_LightDirection, -1.0f, 1.0f);

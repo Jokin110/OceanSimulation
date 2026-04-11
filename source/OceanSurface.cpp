@@ -28,10 +28,13 @@ void OceanSurface::Update()
 	m_ConstantBufferData.m_WorldMatrix = worldMatrix;
 	m_ConstantBufferData.m_InverseTransposeWorldMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, worldMatrix));
 	m_ConstantBufferData.m_ViewProjectionMatrix = XMMatrixMultiply(CameraManager::GetInstance().GetViewMatrix(), CameraManager::GetInstance().GetProjectionMatrix());
-	m_ConstantBufferData.m_Time = TimeManager::GetInstance().GetTime();
 	m_ConstantBufferData.m_CameraPosition = CameraManager::GetInstance().GetCameraPosition();
 	m_ConstantBufferData.m_OceanTextureSize = OceanComputeManager::GetInstance().GetOceanTextureSize();
-	m_ConstantBufferData.m_PatchSize = static_cast<float>(OceanComputeManager::GetInstance().GetOceanPatchSize());
+
+	for (int i = 0; i < OceanComputeManager::GetInstance().m_CascadeNumber; i++)
+	{
+		m_ConstantBufferData.m_PatchSize[i] = OceanComputeManager::GetInstance().GetOceanPatchSize()[i];
+	}
 
 	Object::Update();
 }
@@ -71,7 +74,7 @@ void OceanSurface::GenerateMesh()
 	m_Indices.clear();
 
 	int textureSize = OceanComputeManager::GetInstance().GetOceanTextureSize();
-	float patchSize = OceanComputeManager::GetInstance().GetOceanPatchSize();
+	float patchSize = OceanComputeManager::GetInstance().GetOceanPatchSize()[0];
 
 	int numSubdivisions = 64;
 

@@ -5,7 +5,6 @@ Texture2D<float4> PrecomputedData : register(t0);
 RWTexture2D<float4> Buffer0 : register(u1);
 RWTexture2D<float4> Buffer1 : register(u2);
 
-// Pack variables into a 16-byte aligned Constant Buffer
 cbuffer FFTParams : register(b0)
 {
     uint Size;
