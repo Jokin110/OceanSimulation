@@ -66,6 +66,14 @@ void CameraManager::Update()
         m_CameraPosition.x += m_Speed * TimeManager::GetInstance().GetUnscaledDeltaTime() * cameraRight.x;
         m_CameraPosition.z += m_Speed * TimeManager::GetInstance().GetUnscaledDeltaTime() * cameraRight.z;
     }
+    if (InputManager::GetInstance().GetKey(GLFW_KEY_Q))
+    {
+        m_CameraPosition.y += m_Speed * TimeManager::GetInstance().GetUnscaledDeltaTime();
+	}
+    if (InputManager::GetInstance().GetKey(GLFW_KEY_E))
+    {
+        m_CameraPosition.y -= m_Speed * TimeManager::GetInstance().GetUnscaledDeltaTime();
+	}
 
     if (InputManager::GetInstance().GetKey(GLFW_KEY_P))
     {

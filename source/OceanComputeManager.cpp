@@ -264,15 +264,15 @@ void OceanComputeManager::UpdateTimeEvolutionTextures()
         context->CSSetConstantBuffers(0, 1, &m_d3dTimeEvolutionBuffer);
 
         context->CSSetShaderResources(0, 1, &m_InitialSpectrumSRV[i]);
-        ID3D11UnorderedAccessView* allUAVs[m_CascadeNumber] = { m_XYDisplacementUAV[i], m_ZDisplacementXXDerivativeUAV[i], m_XZYXDerivativeUAV[i], m_YZZZDerivativeUAV[i]};
-        context->CSSetUnorderedAccessViews(0, m_CascadeNumber, allUAVs, nullptr);
+        ID3D11UnorderedAccessView* allUAVs[4] = { m_XYDisplacementUAV[i], m_ZDisplacementXXDerivativeUAV[i], m_XZYXDerivativeUAV[i], m_YZZZDerivativeUAV[i]};
+        context->CSSetUnorderedAccessViews(0, 4, allUAVs, nullptr);
 
         UINT groupsX = m_OceanTextureSize / 16;
         UINT groupsY = m_OceanTextureSize / 16;
         context->Dispatch(groupsX, groupsY, 1);
 
-        ID3D11UnorderedAccessView* nullUAVs[m_CascadeNumber] = { nullptr, nullptr, nullptr, nullptr };
-        context->CSSetUnorderedAccessViews(0, m_CascadeNumber, nullUAVs, nullptr);
+        ID3D11UnorderedAccessView* nullUAVs[4] = { nullptr, nullptr, nullptr, nullptr };
+        context->CSSetUnorderedAccessViews(0, 4, nullUAVs, nullptr);
 
         ID3D11ShaderResourceView* nullSRV[1] = { nullptr };
         context->CSSetShaderResources(0, 1, nullSRV);
@@ -305,8 +305,8 @@ void OceanComputeManager::GenerateDisplacementAndSlopeFinalTextures()
 
     for (int i = 0; i < m_CascadeNumber; i++)
     {
-        ID3D11ShaderResourceView* allSRVs[m_CascadeNumber] = { m_XYDisplacementSRV[i], m_ZDisplacementXXDerivativeSRV[i], m_XZYXDerivativeSRV[i], m_YZZZDerivativeSRV[i] };
-        context->CSSetShaderResources(0, m_CascadeNumber, allSRVs);
+        ID3D11ShaderResourceView* allSRVs[4] = { m_XYDisplacementSRV[i], m_ZDisplacementXXDerivativeSRV[i], m_XZYXDerivativeSRV[i], m_YZZZDerivativeSRV[i] };
+        context->CSSetShaderResources(0, 4, allSRVs);
 
         ID3D11UnorderedAccessView* allUAVs[2] = { m_DisplacementUAV[i], m_SlopeUAV[i] };
         context->CSSetUnorderedAccessViews(0, 2, allUAVs, nullptr);
@@ -318,8 +318,8 @@ void OceanComputeManager::GenerateDisplacementAndSlopeFinalTextures()
 
         ID3D11UnorderedAccessView* nullUAVs[2] = { nullptr, nullptr };
         context->CSSetUnorderedAccessViews(0, 2, nullUAVs, nullptr);
-        ID3D11ShaderResourceView* nullSRVs[m_CascadeNumber] = { nullptr, nullptr, nullptr, nullptr };
-        context->CSSetShaderResources(0, m_CascadeNumber, nullSRVs);
+        ID3D11ShaderResourceView* nullSRVs[4] = { nullptr, nullptr, nullptr, nullptr };
+        context->CSSetShaderResources(0, 4, nullSRVs);
     }
 }
 

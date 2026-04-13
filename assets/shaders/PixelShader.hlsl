@@ -80,9 +80,7 @@ PSOutput Main(PSInput input)
     {
         float4 slopeSample = SlopeTextureCascade[i].Sample(LinearSampler, input.UVs[i]);
     
-        // Extract the raw spatial slope from the Normal vector (slope = -N.xz / N.y)
-        totalSlope.x += -(slopeSample.x / slopeSample.y);
-        totalSlope.y += -(slopeSample.z / slopeSample.y);
+        totalSlope += slopeSample.xy;
     
         totalFoam += slopeSample.a;
     }

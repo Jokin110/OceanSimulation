@@ -36,10 +36,13 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     float dyz = yzzzDerivative.r;
     float dzz = yzzzDerivative.b;
     
-    float3 tangent = normalize(float3(1.0f + dxx, dyx, dxz));
-    float3 binormal = normalize(float3(dxz, dyz, 1.0f + dzz));
+    float3 tangent = float3(1.0f + dxx, dyx, dxz);
+    float3 binormal = float3(dxz, dyz, 1.0f + dzz);
     
-    float3 normal = normalize(cross(binormal, tangent));
+    float3 slopes = cross(binormal, tangent);
+    
+    float slopeX = -(slopes.x / slopes.y);
+    float slopeZ = -(slopes.z / slopes.y);
     
     float Jxx = 1.0f + dxx;
     float Jzz = 1.0f + dzz;
@@ -52,5 +55,5 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     foam = saturate(foam);
     
     DisplacementTexture[uv] = float4(xyDisplacement.r, xyDisplacement.b, zDisplacementXXDerivative.r, 0.0f);
-    SlopeTexture[uv] = float4(normal, foam);
+    SlopeTexture[uv] = float4(slopeX, slopeZ, 0.0f, foam);
 }
