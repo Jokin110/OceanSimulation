@@ -22,12 +22,10 @@ cbuffer PerObjectBuffer : register(b0)
     row_major matrix m_InverseTransposeWorldMatrix;
     row_major matrix m_ViewProjectionMatrix;
     
-    float m_Time;
     float3 m_CameraPosition;
     
     int m_OceanTextureSize; // Size of the ocean texture (e.g., 256x256)
-    float m_PatchSize; // Size of the ocean patch in world units
-    float2 m_Padding; // Padding to align to 16 bytes
+    float m_PatchSize[4]; // Size of the ocean patch in world units
 }
 
 PatchTess ConstantHS(InputPatch<HSInput, 4> patch, uint patchID : SV_PrimitiveID)
@@ -42,10 +40,10 @@ PatchTess ConstantHS(InputPatch<HSInput, 4> patch, uint patchID : SV_PrimitiveID
     float3 centerWorld = mul(float4(centerLocal, 1), m_WorldMatrix).xyz;
     float distanceToCamera = length(m_CameraPosition - centerWorld);
     
-    const float maxDistance = 800.0f; // Beyond this distance, use minimum tessellation
-    const float minDistance = 10.0f; // Within this distance, use maximum tessellation
+    const float maxDistance = 1200.0f; // Beyond this distance, use minimum tessellation
+    const float minDistance = 30.0f; // Within this distance, use maximum tessellation
     
-    float tessFactor = max(1.0f, 64.0f * pow(saturate((maxDistance - distanceToCamera) / (maxDistance - minDistance)), 20));
+    float tessFactor = max(1.0f, 64.0f * pow(saturate((maxDistance - distanceToCamera) / (maxDistance - minDistance)), 16));
     //tessFactor = 1;
     
     pt.EdgeTess[0] = tessFactor; // Left edge

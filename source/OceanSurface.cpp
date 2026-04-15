@@ -76,7 +76,7 @@ void OceanSurface::GenerateMesh()
 	int textureSize = OceanComputeManager::GetInstance().GetOceanTextureSize();
 	float patchSize = OceanComputeManager::GetInstance().GetOceanPatchSize()[0];
 
-	int numSubdivisions = 64;
+	int numSubdivisions = 8;
 
 	int widthVertices = textureSize / numSubdivisions + 1;
 	int depthVertices = textureSize / numSubdivisions + 1;

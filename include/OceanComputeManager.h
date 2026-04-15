@@ -29,9 +29,10 @@ struct OceanSimulationSettings
 	int m_RandomSeed = 0; // Random seed to generate the random gaussian numbers
 
 	float m_LowPassFilter = 0.0f; // Simulation time in seconds
+	float m_HighPassFilter = 0.0f; // Simulation time in seconds
 
 	float m_CascadeAmplitude = 1.0f;
-	XMFLOAT3 m_Padding; // Padding to ensure 16-byte alignment
+	XMFLOAT2 m_Padding; // Padding to ensure 16-byte alignment
 };
 
 struct TimeEvolutionData
@@ -92,9 +93,10 @@ private:
 
     static OceanComputeManager* m_Instance;
 
-	UINT m_OceanTextureSize = 256; // Example grid size for the ocean surface
+	UINT m_OceanTextureSize = 1024; // Example grid size for the ocean surface
 	float m_OceanPatchSize[m_CascadeNumber] = { 2003.0f, 509.0f, 101.0f, 23.0f }; // Size of the ocean patch in world units
-	float m_FrequencyLimits[m_CascadeNumber]; // Frequency limits for each cascade (in Hz)
+	float m_LowPassFilters[m_CascadeNumber]; // Frequency limits for each cascade (in Hz)
+	float m_HighPassFilters[m_CascadeNumber]; // High-pass filters for each cascade (in Hz)
 	float m_CascadeAmplitudes[m_CascadeNumber] = { 1.0f, 2.5f, 8.0f, 25.0f }; // Amplitude scaling for each cascade
 
 	float m_DensityOfWater = 1000.0f; // kg/m^3

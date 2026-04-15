@@ -22,10 +22,12 @@ cbuffer OceanSimulationSettings : register(b0)
     float m_WindAngle; // Wind direction in radians
     
     int m_RandomSeed; // Random seed to generate the random gaussian numbers
-    float m_LowPassFilter; // Simulation time in seconds
+    
+    float m_LowPassFilter;
+    float m_HighPassFilter;
     
     float m_CascadeAmplitude;
-    float3 m_Padding; // Padding to ensure 16-byte alignment
+    float2 m_Padding; // Padding to ensure 16-byte alignment
 }
 
 uint PCGHash(uint state)
@@ -155,7 +157,7 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     
     float kLength = sqrt(kx * kx + ky * ky);
     
-    if (kLength <= PI / m_PatchSize || kLength <= m_LowPassFilter || kLength >= PI * m_OceanTextureSize / m_PatchSize)
+    if (kLength <= m_LowPassFilter || kLength >= m_HighPassFilter || kLength <= PI / m_PatchSize || kLength >= PI * m_OceanTextureSize / m_PatchSize)
     {
         InitialSpectrumTexture[uint2(x, y)] = float4(0.0f, 0.0f, 0.0f, 0.0f);
         return;

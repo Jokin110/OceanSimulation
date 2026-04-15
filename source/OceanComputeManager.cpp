@@ -131,11 +131,15 @@ bool OceanComputeManager::Initialize()
             return false;
 		}
 
-        m_Instance->m_FrequencyLimits[0] = 0.0f;
+        m_Instance->m_LowPassFilters[0] = 0.0f;
+		m_Instance->m_HighPassFilters[m_CascadeNumber - 1] = 9999999999999.0f;
 
         for (int i = 1; i < m_CascadeNumber; i++)
         {
-			m_Instance->m_FrequencyLimits[i] = PI * m_Instance->m_OceanTextureSize / m_Instance->m_OceanPatchSize[i];
+            float filter = 0.5f * PI * m_Instance->m_OceanTextureSize / m_Instance->m_OceanPatchSize[i - 1];
+
+			m_Instance->m_LowPassFilters[i] = filter;
+			m_Instance->m_HighPassFilters[i - 1] = filter;
         }
 
 		return true;
@@ -226,8 +230,9 @@ void OceanComputeManager::GenerateInitialSpectrum(bool initial)
     for (int i = 0; i < m_CascadeNumber; i++)
     {
         m_OceanSimulationSettingsBufferData.m_PatchSize = m_OceanPatchSize[i];
-        m_OceanSimulationSettingsBufferData.m_LowPassFilter = m_FrequencyLimits[i];
-		m_OceanSimulationSettingsBufferData.m_CascadeAmplitude = m_CascadeAmplitudes[i];
+        m_OceanSimulationSettingsBufferData.m_LowPassFilter = m_LowPassFilters[i];
+		m_OceanSimulationSettingsBufferData.m_HighPassFilter = m_HighPassFilters[i];
+        m_OceanSimulationSettingsBufferData.m_CascadeAmplitude = 1.0f;;// m_CascadeAmplitudes[i];
 
         context->UpdateSubresource(m_d3dOceanSimulationSettingsBuffer, 0, nullptr, &m_OceanSimulationSettingsBufferData, 0, 0);
         context->CSSetConstantBuffers(0, 1, &m_d3dOceanSimulationSettingsBuffer);
