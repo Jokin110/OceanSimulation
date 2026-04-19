@@ -49,6 +49,8 @@ public:
 	ID3D11ComputeShader* CreateComputeShader(const std::wstring& fileName) const;
 	ID3D11ComputeShader* CreateComputeShaderWithEntry(const std::wstring& filePath, LPCSTR entryPoint) const;
 
+	int* GetRasterizerIndex() { return &m_RasterizerIndex; }
+
 protected:
 	bool Initialize() override;
     bool Load() override;
@@ -85,7 +87,9 @@ private:
 	ID3D11Texture2D* m_d3dDepthStencilBuffer = nullptr;
 	ID3D11DepthStencilState* m_d3dDepthStencilState = nullptr;
 	
-	ID3D11RasterizerState* m_d3dRasterizerState = nullptr;
+	ID3D11RasterizerState* m_d3dRasterizerState[2] = { nullptr };
+
+	int m_RasterizerIndex = 0;
 
 	D3D11_VIEWPORT m_d3dViewport = { 0 };
 

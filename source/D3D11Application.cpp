@@ -29,7 +29,8 @@ D3D11Application::~D3D11Application()
 
 	// Ensure all pointers are released
     m_d3dDeviceContext->Flush();
-    SafeRelease(m_d3dRasterizerState);
+    SafeRelease(m_d3dRasterizerState[0]);
+    SafeRelease(m_d3dRasterizerState[1]);
     DestroySwapchainResources();
 	DestroyDepthStencilResources();
     SafeRelease(m_d3dSwapChain);
@@ -310,7 +311,17 @@ bool D3D11Application::CreateDepthStencilResources()
 
     if (FAILED(m_d3dDevice->CreateRasterizerState(
         &rasterizerDesc,
-        &m_d3dRasterizerState)))
+        &m_d3dRasterizerState[0])))
+    {
+        cout << "D3D11: Failed to create rasterizer state." << endl;
+        return false;
+    }
+
+    rasterizerDesc.FillMode = D3D11_FILL_WIREFRAME;
+    
+    if (FAILED(m_d3dDevice->CreateRasterizerState(
+        &rasterizerDesc,
+        &m_d3dRasterizerState[1])))
     {
         cout << "D3D11: Failed to create rasterizer state." << endl;
         return false;
@@ -342,7 +353,8 @@ void D3D11Application::DestroyDepthStencilResources()
     SafeRelease(m_d3dDepthStencilView);
     SafeRelease(m_d3dDepthStencilBuffer);
     SafeRelease(m_d3dDepthStencilState);
-    SafeRelease(m_d3dRasterizerState);
+    SafeRelease(m_d3dRasterizerState[0]);
+    SafeRelease(m_d3dRasterizerState[1]);
 }
 
 void D3D11Application::ClearScreen(const float clearColor[4], float clearDepth, UINT8 clearStencil)
@@ -407,12 +419,10 @@ void D3D11Application::Render()
 {
     constexpr float clearColor[] = { 0.53f, 0.81f, 0.92f, 1.0f };
 
-	const int cascadeSize = OceanComputeManager::GetInstance().m_CascadeNumber;
-
 	ClearScreen(Colors::SkyBlue, 1.0f, 0);
 
     // D3D11 rendering for all objects
-    m_d3dDeviceContext->RSSetState(m_d3dRasterizerState);
+    m_d3dDeviceContext->RSSetState(m_d3dRasterizerState[m_RasterizerIndex]);
     m_d3dDeviceContext->RSSetViewports(1, &m_d3dViewport);
 
     m_d3dDeviceContext->OMSetRenderTargets(1, &m_d3dRenderTargetView, m_d3dDepthStencilView);
@@ -435,38 +445,38 @@ void D3D11Application::Render()
         m_d3dDeviceContext->IASetIndexBuffer(object->GetIndexBuffer(), DXGI_FORMAT::DXGI_FORMAT_R32_UINT, 0);
 
         m_d3dDeviceContext->VSSetShader(object->GetVertexShader(), nullptr, 0);
-        m_d3dDeviceContext->VSSetConstantBuffers(0, 1, &object->GetConstantBuffers());
+        m_d3dDeviceContext->VSSetConstantBuffers(0, 1, &object->GetVertexShaderConstantBuffers());
 
         if (object->UseTessellation())
         {
             m_d3dDeviceContext->HSSetShader(object->GetHullShader(), nullptr, 0);
-            m_d3dDeviceContext->HSSetConstantBuffers(0, 1, &object->GetConstantBuffers());
+            m_d3dDeviceContext->HSSetConstantBuffers(0, 1, &object->GetHullShaderConstantBuffers());
 
             m_d3dDeviceContext->DSSetShader(object->GetDomainShader(), nullptr, 0);
-            m_d3dDeviceContext->DSSetConstantBuffers(0, 1, &object->GetConstantBuffers());
+            m_d3dDeviceContext->DSSetConstantBuffers(0, 1, &object->GetDomainShaderConstantBuffers());
 
             //ID3D11ShaderResourceView* oceanSRV[1] = { OceanComputeManager::GetInstance().GetDisplacementSRV() };
-            m_d3dDeviceContext->DSSetShaderResources(0, cascadeSize, OceanComputeManager::GetInstance().GetDisplacementSRV());
+            m_d3dDeviceContext->DSSetShaderResources(0, CASCADE_COUNT, OceanComputeManager::GetInstance().GetDisplacementSRV());
             m_d3dDeviceContext->DSSetSamplers(0, 1, &object->GetSamplerState());
         }
 
         m_d3dDeviceContext->PSSetShader(object->GetPixelShader(), nullptr, 0);
 
         //ID3D11ShaderResourceView* pixelShaderSRV[1] = { OceanComputeManager::GetInstance().GetSlopeSRV() };
-        m_d3dDeviceContext->PSSetShaderResources(0, cascadeSize, OceanComputeManager::GetInstance().GetSlopeSRV());
+        m_d3dDeviceContext->PSSetShaderResources(0, CASCADE_COUNT, OceanComputeManager::GetInstance().GetSlopeSRV());
 		m_d3dDeviceContext->PSSetSamplers(0, 1, &object->GetSamplerState());
 
         if (object->GetUpdatePixelShaderBuffer())
         {
-            m_d3dDeviceContext->PSSetConstantBuffers(0, 1, &object->GetPixelShaderBuffers());
+            m_d3dDeviceContext->PSSetConstantBuffers(0, 1, &object->GetPixelShaderConstantBuffers());
             object->SetUpdatePixelShaderBuffer(false);
         }
 
         m_d3dDeviceContext->DrawIndexed(object->GetIndexCount(), 0, 0);
 
-        ID3D11ShaderResourceView* nullSRV[4] = { nullptr };
-        m_d3dDeviceContext->DSSetShaderResources(0, cascadeSize, nullSRV);
-        m_d3dDeviceContext->PSSetShaderResources(0, cascadeSize, nullSRV);
+        ID3D11ShaderResourceView* nullSRV[CASCADE_COUNT] = { nullptr };
+        m_d3dDeviceContext->DSSetShaderResources(0, CASCADE_COUNT, nullSRV);
+        m_d3dDeviceContext->PSSetShaderResources(0, CASCADE_COUNT, nullSRV);
     }
 
     ImGui::Render();

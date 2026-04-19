@@ -13,7 +13,7 @@ OceanComputeManager* OceanComputeManager::m_Instance = nullptr;
 
 OceanComputeManager::OceanComputeManager()
 {
-    for (int i = 0; i < m_CascadeNumber; i++)
+    for (int i = 0; i < CASCADE_COUNT; i++)
     {
         m_InitialSpectrumTexture[i] = nullptr;
         m_InitialSpectrumUAV[i] = nullptr;
@@ -63,7 +63,7 @@ OceanComputeManager::OceanComputeManager()
 
 OceanComputeManager::~OceanComputeManager()
 {
-    for (int i = 0; i < m_CascadeNumber; i++)
+    for (int i = 0; i < CASCADE_COUNT; i++)
     {
         if (m_InitialSpectrumUAV[i]) m_InitialSpectrumUAV[i]->Release();
         if (m_InitialSpectrumSRV[i]) m_InitialSpectrumSRV[i]->Release();
@@ -119,6 +119,13 @@ bool OceanComputeManager::Initialize()
     {
         m_Instance = new OceanComputeManager;
 
+        std::ifstream cascadeSettingsFile("CascadeSettings.bin", std::ios::binary);
+        if (cascadeSettingsFile.is_open())
+        {
+            cascadeSettingsFile.read(reinterpret_cast<char*>(&m_Instance->m_OceanSimulationCascadeSettings), sizeof(OceanSimulationCascadeSettings));
+            cascadeSettingsFile.close();
+        }
+
         if (!m_Instance->CreateTextureAndViews())
         {
 			cout << "Failed to create textures and views for ocean simulation." << endl;
@@ -131,16 +138,16 @@ bool OceanComputeManager::Initialize()
             return false;
 		}
 
-        m_Instance->m_LowPassFilters[0] = 0.0f;
-		m_Instance->m_HighPassFilters[m_CascadeNumber - 1] = 9999999999999.0f;
-
-        for (int i = 1; i < m_CascadeNumber; i++)
+        std::ifstream tessellationSettingsFile("TessellationSettings.bin", std::ios::binary);
+        if (tessellationSettingsFile.is_open())
         {
-            float filter = 0.5f * PI * m_Instance->m_OceanTextureSize / m_Instance->m_OceanPatchSize[i - 1];
-
-			m_Instance->m_LowPassFilters[i] = filter;
-			m_Instance->m_HighPassFilters[i - 1] = filter;
+            tessellationSettingsFile.read(reinterpret_cast<char*>(&m_Instance->m_TessellationSettingsData), sizeof(TessellationSettingsData));
+            tessellationSettingsFile.close();
         }
+
+        m_Instance->m_DisplacementAndSlopeBufferData.m_ChoppinessFactor = 1.0f;
+
+        m_Instance->ApplyCascadeSettings(false);
 
 		return true;
 	}
@@ -152,7 +159,7 @@ void OceanComputeManager::Start()
 {
     FFTManager::GetInstance().PrecomputeTwiddleFactors();
 
-	GenerateInitialSpectrum(true);
+    GenerateInitialSpectrum(true);
 }
 
 void OceanComputeManager::Update()
@@ -213,34 +220,36 @@ void OceanComputeManager::InitializeOceanSimulationSettings(bool initial)
 
 void OceanComputeManager::GenerateInitialSpectrum(bool initial)
 {
+    RecalculateFrequencyFilters();
+
     ID3D11DeviceContext* context = D3D11Application::GetInstance().GetDeviceContext();
 
     context->CSSetShader(m_InitialSpectrumComputeShader, nullptr, 0);
 
     InitializeOceanSimulationSettings(initial);
 
-    m_OceanSimulationSettingsBufferData.m_OceanTextureSize = m_OceanTextureSize;
+    m_OceanSimulationSettingsBufferData.m_OceanTextureSize = m_OceanSimulationCascadeSettings.m_OceanTextureSize;
 
-    m_OceanSimulationSettingsBufferData.m_PeakFrequency = max(22.0f * m_OceanSimulationSettingsBufferData.m_GravitationalConstant * m_OceanSimulationSettingsBufferData.m_GravitationalConstant / (m_OceanSimulationSettingsBufferData.m_AverageWindSpeed * m_OceanSimulationSettingsBufferData.m_FetchLength), 0.01f);
+    m_OceanSimulationSettingsBufferData.m_PeakFrequency = pow(22.0f * m_OceanSimulationSettingsBufferData.m_GravitationalConstant * m_OceanSimulationSettingsBufferData.m_GravitationalConstant / max(m_OceanSimulationSettingsBufferData.m_AverageWindSpeed * m_OceanSimulationSettingsBufferData.m_FetchLength, 0.01f), 1.0f / 3.0f);
     m_OceanSimulationSettingsBufferData.m_Alpha = 0.076f * pow(m_OceanSimulationSettingsBufferData.m_AverageWindSpeed * m_OceanSimulationSettingsBufferData.m_AverageWindSpeed / (m_OceanSimulationSettingsBufferData.m_GravitationalConstant * m_OceanSimulationSettingsBufferData.m_FetchLength), 0.22f);
     m_OceanSimulationSettingsBufferData.m_WindAngle = m_OceanSimulationSettingsBufferData.m_WindDirection * (PI / 180.0f); // Convert to radians
 
     m_OceanSimulationSettingsBufferData.m_RandomSeed = rand();
 
-    for (int i = 0; i < m_CascadeNumber; i++)
+    for (int i = 0; i < CASCADE_COUNT; i++)
     {
-        m_OceanSimulationSettingsBufferData.m_PatchSize = m_OceanPatchSize[i];
+        m_OceanSimulationSettingsBufferData.m_PatchSize = m_OceanSimulationCascadeSettings.m_OceanPatchSize[i];
         m_OceanSimulationSettingsBufferData.m_LowPassFilter = m_LowPassFilters[i];
 		m_OceanSimulationSettingsBufferData.m_HighPassFilter = m_HighPassFilters[i];
-        m_OceanSimulationSettingsBufferData.m_CascadeAmplitude = 1.0f;;// m_CascadeAmplitudes[i];
+        m_OceanSimulationSettingsBufferData.m_CascadeAmplitude = m_OceanSimulationCascadeSettings.m_CascadeAmplitudes[i];
 
         context->UpdateSubresource(m_d3dOceanSimulationSettingsBuffer, 0, nullptr, &m_OceanSimulationSettingsBufferData, 0, 0);
         context->CSSetConstantBuffers(0, 1, &m_d3dOceanSimulationSettingsBuffer);
 
         context->CSSetUnorderedAccessViews(0, 1, &m_InitialSpectrumUAV[i], nullptr);
 
-        UINT groupsX = m_OceanTextureSize / 16;
-        UINT groupsY = m_OceanTextureSize / 16;
+        UINT groupsX = m_OceanSimulationCascadeSettings.m_OceanTextureSize / 16;
+        UINT groupsY = m_OceanSimulationCascadeSettings.m_OceanTextureSize / 16;
         context->Dispatch(groupsX, groupsY, 1);
 
         ID3D11UnorderedAccessView* nullUAV[1] = { nullptr };
@@ -254,16 +263,16 @@ void OceanComputeManager::UpdateTimeEvolutionTextures()
 
     context->CSSetShader(m_TimeEvolutionComputeShader, nullptr, 0);
 
-	m_TimeEvolutionBufferData.m_OceanTextureSize = m_OceanTextureSize;
+	m_TimeEvolutionBufferData.m_OceanTextureSize = m_OceanSimulationCascadeSettings.m_OceanTextureSize;
     m_TimeEvolutionBufferData.m_DensityOfWater = m_OceanSimulationSettingsBufferData.m_DensityOfWater;
     m_TimeEvolutionBufferData.m_SurfaceTension = m_OceanSimulationSettingsBufferData.m_SurfaceTension;
     m_TimeEvolutionBufferData.m_GravitationalConstant = m_OceanSimulationSettingsBufferData.m_GravitationalConstant;
     m_TimeEvolutionBufferData.m_OceanDepth = m_OceanSimulationSettingsBufferData.m_OceanDepth;
     m_TimeEvolutionBufferData.m_Time = TimeManager::GetInstance().GetTime();
 
-    for (int i = 0; i < m_CascadeNumber; i++)
+    for (int i = 0; i < CASCADE_COUNT; i++)
     {
-        m_TimeEvolutionBufferData.m_PatchSize = m_OceanPatchSize[i];
+        m_TimeEvolutionBufferData.m_PatchSize = m_OceanSimulationCascadeSettings.m_OceanPatchSize[i];
 
         context->UpdateSubresource(m_d3dTimeEvolutionBuffer, 0, nullptr, &m_TimeEvolutionBufferData, 0, 0);
         context->CSSetConstantBuffers(0, 1, &m_d3dTimeEvolutionBuffer);
@@ -272,8 +281,8 @@ void OceanComputeManager::UpdateTimeEvolutionTextures()
         ID3D11UnorderedAccessView* allUAVs[4] = { m_XYDisplacementUAV[i], m_ZDisplacementXXDerivativeUAV[i], m_XZYXDerivativeUAV[i], m_YZZZDerivativeUAV[i]};
         context->CSSetUnorderedAccessViews(0, 4, allUAVs, nullptr);
 
-        UINT groupsX = m_OceanTextureSize / 16;
-        UINT groupsY = m_OceanTextureSize / 16;
+        UINT groupsX = m_OceanSimulationCascadeSettings.m_OceanTextureSize / 16;
+        UINT groupsY = m_OceanSimulationCascadeSettings.m_OceanTextureSize / 16;
         context->Dispatch(groupsX, groupsY, 1);
 
         ID3D11UnorderedAccessView* nullUAVs[4] = { nullptr, nullptr, nullptr, nullptr };
@@ -286,7 +295,7 @@ void OceanComputeManager::UpdateTimeEvolutionTextures()
 
 void OceanComputeManager::UpdateFFTTextures()
 {
-    for (int i = 0; i < m_CascadeNumber; i++)
+    for (int i = 0; i < CASCADE_COUNT; i++)
     {
         FFTManager::GetInstance().ComputeIFFT2D(m_XYDisplacementUAV[i], m_XYDisplacementPingPongUAV[i], true, false, true);
         FFTManager::GetInstance().ComputeIFFT2D(m_ZDisplacementXXDerivativeUAV[i], m_ZDisplacementXXDerivativePingPongUAV[i], true, false, true);
@@ -301,14 +310,16 @@ void OceanComputeManager::GenerateDisplacementAndSlopeFinalTextures()
 
     context->CSSetShader(m_DisplacementAndSlopeComputeShader, nullptr, 0);
 
-	m_DisplacementAndSlopeBufferData.m_FoamBias = SceneManager::GetInstance().GetFoamBias(); // Example value, adjust as needed
-	m_DisplacementAndSlopeBufferData.m_DecayFactor = SceneManager::GetInstance().GetDecayFactor(); // Example value, adjust as needed
-	m_DisplacementAndSlopeBufferData.m_DeltaTime = TimeManager::GetInstance().GetDeltaTime();
+	m_DisplacementAndSlopeBufferData.m_FoamBias = SceneManager::GetInstance().GetFoamBias();
+	m_DisplacementAndSlopeBufferData.m_DecayFactor = SceneManager::GetInstance().GetDecayFactor();
+    m_DisplacementAndSlopeBufferData.m_DeltaTime = TimeManager::GetInstance().GetDeltaTime();
+    m_DisplacementAndSlopeBufferData.m_FoamAddition = SceneManager::GetInstance().GetFoamAddition();
+    //m_DisplacementAndSlopeBufferData.m_ChoppinessFactor = SceneManager::GetInstance().GetChoppinessFactor();
 
 	context->UpdateSubresource(m_d3dDisplacementAndSlopeBuffer, 0, nullptr, &m_DisplacementAndSlopeBufferData, 0, 0);
 	context->CSSetConstantBuffers(0, 1, &m_d3dDisplacementAndSlopeBuffer);
 
-    for (int i = 0; i < m_CascadeNumber; i++)
+    for (int i = 0; i < CASCADE_COUNT; i++)
     {
         ID3D11ShaderResourceView* allSRVs[4] = { m_XYDisplacementSRV[i], m_ZDisplacementXXDerivativeSRV[i], m_XZYXDerivativeSRV[i], m_YZZZDerivativeSRV[i] };
         context->CSSetShaderResources(0, 4, allSRVs);
@@ -316,8 +327,8 @@ void OceanComputeManager::GenerateDisplacementAndSlopeFinalTextures()
         ID3D11UnorderedAccessView* allUAVs[2] = { m_DisplacementUAV[i], m_SlopeUAV[i] };
         context->CSSetUnorderedAccessViews(0, 2, allUAVs, nullptr);
 
-        UINT groupsX = m_OceanTextureSize / 16;
-        UINT groupsY = m_OceanTextureSize / 16;
+        UINT groupsX = m_OceanSimulationCascadeSettings.m_OceanTextureSize / 16;
+        UINT groupsY = m_OceanSimulationCascadeSettings.m_OceanTextureSize / 16;
 
         context->Dispatch(groupsX, groupsY, 1);
 
@@ -330,17 +341,28 @@ void OceanComputeManager::GenerateDisplacementAndSlopeFinalTextures()
 
 void OceanComputeManager::UpdateUI()
 {
-    ImGui::Begin("Ocean Simulation Settings");
+    UpdateSimulationSettingsUI();
+
+    UpdateGraphicSettingsUI();
+
+    UpdateCascadeSettingsUI();
+}
+
+void OceanComputeManager::UpdateSimulationSettingsUI()
+{
+    ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysAutoResize;
+    ImGui::Begin("Ocean Simulation Settings", nullptr, windowFlags);
 
     ImGui::SliderFloat("Wind Direction (degrees)", &m_WindDirection, 0.0f, 359.9f);
     ImGui::SliderFloat("Average Wind Speed (m/s)", &m_AverageWindSpeed, 0.0f, 100.0f);
     ImGui::SliderFloat("Fetch Length (m)", &m_FetchLength, 0.0f, 500000.0f);
     ImGui::SliderFloat("Peak Enhancement Factor", &m_PeakEnhancementFactor, 0.0f, 7.0f);
     ImGui::SliderFloat("Swell", &m_Swell, 0.0f, 1.0f);
-    ImGui::SliderFloat("Ocean Depth (m)", &m_OceanDepth, 0.0f, 10000.0f);
+    ImGui::DragFloat("Ocean Depth (m)", &m_OceanDepth, 1.0f, 0.0f, 5000.0f, "%.1f");
     ImGui::SliderFloat("Density of Water (kg/m^3)", &m_DensityOfWater, 500.0f, 2000.0f);
     ImGui::SliderFloat("Surface Tension (N/m)", &m_SurfaceTension, 0.0f, 0.2f);
     ImGui::SliderFloat("Gravitational Constant (m/s^2)", &m_GravitationalConstant, 0.0f, 20.0f);
+    ImGui::SliderFloat("Choppiness Factor", &m_DisplacementAndSlopeBufferData.m_ChoppinessFactor, 0.0f, 10.0f);
 
     if (ImGui::Button("Apply Changes"))
     {
@@ -363,17 +385,222 @@ void OceanComputeManager::UpdateUI()
 
     if (ImGui::Button("Load Settings"))
     {
-        std::ifstream inFile("OceanSimulationSettings.bin", std::ios::binary);
+        GenerateInitialSpectrum(true);
+    }
+
+    ImGui::End();
+}
+
+void OceanComputeManager::UpdateGraphicSettingsUI()
+{
+    ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysAutoResize;
+    ImGui::Begin("Graphics Settings", nullptr, windowFlags);
+
+    ImGui::TextColored(ImVec4(0.53f, 0.81f, 0.92f, 1.0f), "Rendering Pipeline"); // Sky blue text
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    const char* rasterizerModes[] = { "Solid", "Wireframe" };
+
+    ImGui::PushItemWidth(150.0f);
+
+    ImGui::Combo("Fill Mode", D3D11Application::GetInstance().GetRasterizerIndex(), rasterizerModes, IM_ARRAYSIZE(rasterizerModes));
+
+    ImGui::PopItemWidth();
+
+    ImGui::TextColored(ImVec4(0.53f, 0.81f, 0.92f, 1.0f), "Tessellation"); // Sky blue text
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    ImGui::SliderFloat("Min Distance", &m_TessellationSettingsData.m_MinTessellationDistance, 0.0f, 200.0f);
+    ImGui::SliderFloat("MaxDistance", &m_TessellationSettingsData.m_MaxTessellationDistance, 200.0f, 5000.0f);
+    ImGui::SliderInt("Tessellation Exponent", &m_TessellationSettingsData.m_TessellationExponent, 1, 30);
+
+    if (ImGui::Button("Save Settings"))
+    {
+        std::ofstream outFile("TessellationSettings.bin", std::ios::binary);
+        if (outFile.is_open())
+        {
+            outFile.write(reinterpret_cast<const char*>(&m_TessellationSettingsData), sizeof(TessellationSettingsData));
+            outFile.close();
+        }
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Load Settings"))
+    {
+        std::ifstream inFile("TessellationSettings.bin", std::ios::binary);
         if (inFile.is_open())
         {
-            inFile.read(reinterpret_cast<char*>(&m_OceanSimulationSettingsBufferData), sizeof(m_OceanSimulationSettingsBufferData));
+            inFile.read(reinterpret_cast<char*>(&m_TessellationSettingsData), sizeof(TessellationSettingsData));
             inFile.close();
-
-            GenerateInitialSpectrum(false);
         }
     }
 
     ImGui::End();
+}
+
+void OceanComputeManager::UpdateCascadeSettingsUI()
+{
+    ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysAutoResize;
+    ImGui::Begin("Cascade Settings", nullptr, windowFlags);
+
+    ImGui::PushItemWidth(150.0f);
+
+    ImGui::Combo("Texture Size", &m_TemporaryOceanSimulationCascadeSettings.m_SelectedTextureSizeIndex, m_TextureDropdownNames, IM_ARRAYSIZE(m_TextureDropdownNames));
+    m_TemporaryOceanSimulationCascadeSettings.m_OceanTextureSize = m_TextureSizes[m_TemporaryOceanSimulationCascadeSettings.m_SelectedTextureSizeIndex];
+
+    ImGui::PopItemWidth();
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::TextColored(ImVec4(0.53f, 0.81f, 0.92f, 1.0f), "Cascade Parameters");
+    ImGui::Spacing();
+
+    if (ImGui::BeginTable("CascadeTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchSame))
+    {
+        ImGui::TableSetupColumn("Cascade");
+        ImGui::TableSetupColumn("Patch Size (m)");
+        ImGui::TableSetupColumn("Amplitude Scale");
+        ImGui::TableHeadersRow();
+
+        for (int i = 0; i < CASCADE_COUNT; i++)
+        {
+            ImGui::TableNextRow();
+
+            ImGui::TableSetColumnIndex(0);
+            ImGui::Spacing();
+            ImGui::Text(" Cascade %d", i);
+
+            ImGui::TableSetColumnIndex(1);
+            ImGui::PushID(i);
+            ImGui::SetNextItemWidth(-FLT_MIN); 
+            ImGui::DragFloat("##PatchSize", &m_TemporaryOceanSimulationCascadeSettings.m_OceanPatchSize[i], 1.0f, 1.0f, 10000.0f, "%.1f");
+            ImGui::PopID();
+
+            ImGui::TableSetColumnIndex(2);
+            ImGui::PushID(i + CASCADE_COUNT);
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            ImGui::DragFloat("##Amplitude", &m_TemporaryOceanSimulationCascadeSettings.m_CascadeAmplitudes[i], 0.1f, 0.0f, 30.0f, "%.2f");
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    ImGui::DragFloat("Mesh Vertex Separation", &m_TemporaryOceanSimulationCascadeSettings.m_MeshVertexSeparation, 1.0f, 0.0f, 200.0f, "%.1f");
+    ImGui::DragFloat("Frequency Filter Multiplier", &m_TemporaryOceanSimulationCascadeSettings.m_FrequencyFilterMultiplier, 0.01f, 0.0f, 1.0f, "%.3f");
+
+    if (ImGui::Button("Apply Changes"))
+    {
+        ApplyCascadeSettings(true);
+
+        if (!ReinitializeTexturesMeshesAndSpectrum())
+        {
+            cout << "Couldn't reinitialize textures, meshes and spectrum!";
+        }
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Save Settings"))
+    {
+        ApplyCascadeSettings(true);
+
+        std::ofstream outFile("CascadeSettings.bin", std::ios::binary);
+        if (outFile.is_open())
+        {
+            outFile.write(reinterpret_cast<const char*>(&m_OceanSimulationCascadeSettings), sizeof(OceanSimulationCascadeSettings));
+            outFile.close();
+        }
+
+        if (!ReinitializeTexturesMeshesAndSpectrum())
+        {
+            cout << "Couldn't reinitialize textures, meshes and spectrum!";
+        }
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Load Settings"))
+    {
+        std::ifstream inFile("CascadeSettings.bin", std::ios::binary);
+        if (inFile.is_open())
+        {
+            inFile.read(reinterpret_cast<char*>(&m_OceanSimulationCascadeSettings), sizeof(OceanSimulationCascadeSettings));
+            inFile.close();
+
+            if (!ReinitializeTexturesMeshesAndSpectrum())
+            {
+                cout << "Couldn't reinitialize textures, meshes and spectrum!";
+            }
+        }
+
+        ApplyCascadeSettings(false);
+    }
+
+    ImGui::End();
+}
+
+bool OceanComputeManager::ReinitializeTexturesMeshesAndSpectrum()
+{
+    if (!CreateTextureAndViews()) return false;
+
+    if (!FFTManager::GetInstance().ResizeTextures(m_OceanSimulationCascadeSettings.m_OceanTextureSize)) return false;
+
+    GenerateInitialSpectrum(false);
+
+    SceneManager::GetInstance().RegenerateMeshes();
+
+    return true;
+}
+
+void OceanComputeManager::RecalculateFrequencyFilters()
+{
+    m_LowPassFilters[0] = 0.0f;
+    m_HighPassFilters[CASCADE_COUNT - 1] = 9999999999999.0f;
+
+    for (int i = 1; i < CASCADE_COUNT; i++)
+    {
+        float filter = m_OceanSimulationCascadeSettings.m_FrequencyFilterMultiplier * PI * m_OceanSimulationCascadeSettings.m_OceanTextureSize / m_OceanSimulationCascadeSettings.m_OceanPatchSize[i - 1];
+
+        m_LowPassFilters[i] = filter;
+        m_HighPassFilters[i - 1] = filter;
+    }
+}
+
+void OceanComputeManager::ApplyCascadeSettings(bool apply)
+{
+    if (apply)
+    {
+        m_OceanSimulationCascadeSettings.m_OceanTextureSize = m_TemporaryOceanSimulationCascadeSettings.m_OceanTextureSize;
+        m_OceanSimulationCascadeSettings.m_SelectedTextureSizeIndex = m_TemporaryOceanSimulationCascadeSettings.m_SelectedTextureSizeIndex;
+        m_OceanSimulationCascadeSettings.m_MeshVertexSeparation = m_TemporaryOceanSimulationCascadeSettings.m_MeshVertexSeparation;
+        m_OceanSimulationCascadeSettings.m_FrequencyFilterMultiplier = m_TemporaryOceanSimulationCascadeSettings.m_FrequencyFilterMultiplier;
+
+        for (int i = 0; i < CASCADE_COUNT; i++)
+        {
+            m_OceanSimulationCascadeSettings.m_OceanPatchSize[i] = m_TemporaryOceanSimulationCascadeSettings.m_OceanPatchSize[i];
+            m_OceanSimulationCascadeSettings.m_CascadeAmplitudes[i] = m_TemporaryOceanSimulationCascadeSettings.m_CascadeAmplitudes[i];
+        }
+    }
+    else
+    {
+        m_TemporaryOceanSimulationCascadeSettings.m_OceanTextureSize = m_OceanSimulationCascadeSettings.m_OceanTextureSize;
+        m_TemporaryOceanSimulationCascadeSettings.m_SelectedTextureSizeIndex = m_OceanSimulationCascadeSettings.m_SelectedTextureSizeIndex;
+        m_TemporaryOceanSimulationCascadeSettings.m_MeshVertexSeparation = m_OceanSimulationCascadeSettings.m_MeshVertexSeparation;
+        m_TemporaryOceanSimulationCascadeSettings.m_FrequencyFilterMultiplier = m_OceanSimulationCascadeSettings.m_FrequencyFilterMultiplier;
+
+        for (int i = 0; i < CASCADE_COUNT; i++)
+        {
+            m_TemporaryOceanSimulationCascadeSettings.m_OceanPatchSize[i] = m_OceanSimulationCascadeSettings.m_OceanPatchSize[i];
+            m_TemporaryOceanSimulationCascadeSettings.m_CascadeAmplitudes[i] = m_OceanSimulationCascadeSettings.m_CascadeAmplitudes[i];
+        }
+    }
 }
 
 bool OceanComputeManager::CreateTextureAndViews()
@@ -382,8 +609,8 @@ bool OceanComputeManager::CreateTextureAndViews()
 
     // Resource descriptors
     D3D11_TEXTURE2D_DESC texDesc = {};
-    texDesc.Width = m_Instance->m_OceanTextureSize;
-    texDesc.Height = m_Instance->m_OceanTextureSize;
+    texDesc.Width = m_Instance->m_OceanSimulationCascadeSettings.m_OceanTextureSize;
+    texDesc.Height = m_Instance->m_OceanSimulationCascadeSettings.m_OceanTextureSize;
     texDesc.MipLevels = 1;
     texDesc.ArraySize = 1;
     texDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
@@ -401,7 +628,7 @@ bool OceanComputeManager::CreateTextureAndViews()
     srvDesc.Texture2D.MipLevels = 1;
 
     // Create resources for the initial spectrum
-    for (int i = 0; i < m_CascadeNumber; i++)
+    for (int i = 0; i < CASCADE_COUNT; i++)
     {
         if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_InitialSpectrumTexture[i])))
         {
@@ -435,7 +662,7 @@ bool OceanComputeManager::CreateTextureAndViews()
     }
 
 	// Create resources for the fft displacement and slope calculation textures
-    for (int i = 0; i < m_CascadeNumber; i++)
+    for (int i = 0; i < CASCADE_COUNT; i++)
     {
         if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_XYDisplacementTexture[i])))
         {
@@ -554,7 +781,7 @@ bool OceanComputeManager::CreateTextureAndViews()
     }
 
 	// Create resources for the final displacement and slope textures
-    for (int i = 0; i < m_CascadeNumber; i++)
+    for (int i = 0; i < CASCADE_COUNT; i++)
     {
         if (FAILED(device->CreateTexture2D(&texDesc, nullptr, &m_Instance->m_DisplacementTexture[i])))
         {

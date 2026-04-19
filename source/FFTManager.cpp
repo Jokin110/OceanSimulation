@@ -49,6 +49,17 @@ bool FFTManager::Initialize(int size)
     return false;
 }
 
+bool FFTManager::ResizeTextures(int size)
+{
+    m_Size = size;
+
+    if (!m_Instance->CreateResources()) return false;
+
+    PrecomputeTwiddleFactors();
+
+    return true;
+}
+
 bool FFTManager::CreateResources()
 {
     ID3D11Device* device = D3D11Application::GetInstance().GetDevice();

@@ -19,40 +19,45 @@ struct PatchTess
 cbuffer PerObjectBuffer : register(b0)
 {
     row_major matrix m_WorldMatrix;
-    row_major matrix m_InverseTransposeWorldMatrix;
-    row_major matrix m_ViewProjectionMatrix;
     
     float3 m_CameraPosition;
     
-    int m_OceanTextureSize; // Size of the ocean texture (e.g., 256x256)
-    float m_PatchSize[4]; // Size of the ocean patch in world units
+    float m_MinDistance;
+    float m_MaxDistance;
+    int m_TessFactorExponent;
+    
+    float2 m_Padding;
+}
+
+float CalculateTessFactor(float3 v0, float3 v1)
+{
+    float3 edgeCenterLocal = (v0 + v1) * 0.5f;
+    
+    float3 edgeCenterWorld = mul(float4(edgeCenterLocal, 1), m_WorldMatrix).xyz;
+    
+    float distanceToCamera = length(m_CameraPosition - edgeCenterWorld);
+    
+    return max(1.0f, 64.0f * pow(saturate((m_MaxDistance - distanceToCamera) / (m_MaxDistance - m_MinDistance)), m_TessFactorExponent));
 }
 
 PatchTess ConstantHS(InputPatch<HSInput, 4> patch, uint patchID : SV_PrimitiveID)
 {
     PatchTess pt;
-
-    // --- DYNAMIC LOD LOGIC ---
-    // Here you would calculate the distance from the CameraPosition to the patch.
-    // For now, we will hardcode a tessellation factor.
-    // Max factor in D3D11 is 64.0.
+    
     float3 centerLocal = 0.25f * (patch[0].Position + patch[1].Position + patch[2].Position + patch[3].Position);
-    float3 centerWorld = mul(float4(centerLocal, 1), m_WorldMatrix).xyz;
-    float distanceToCamera = length(m_CameraPosition - centerWorld);
     
-    const float maxDistance = 1200.0f; // Beyond this distance, use minimum tessellation
-    const float minDistance = 30.0f; // Within this distance, use maximum tessellation
+    float3 v0 = patch[0].Position; // bottomLeftVertex
+    float3 v1 = patch[1].Position; // topLeftVertex
+    float3 v2 = patch[2].Position; // bottomRightVertex
+    float3 v3 = patch[3].Position; // topRightVertex
     
-    float tessFactor = max(1.0f, 64.0f * pow(saturate((maxDistance - distanceToCamera) / (maxDistance - minDistance)), 16));
-    //tessFactor = 1;
+    pt.EdgeTess[0] = CalculateTessFactor(v0, v1); // Left edge
+    pt.EdgeTess[1] = CalculateTessFactor(v1, v3); // Top edge
+    pt.EdgeTess[2] = CalculateTessFactor(v2, v3); // Right edge
+    pt.EdgeTess[3] = CalculateTessFactor(v0, v2); // Bottom edge
     
-    pt.EdgeTess[0] = tessFactor; // Left edge
-    pt.EdgeTess[1] = tessFactor; // Top edge
-    pt.EdgeTess[2] = tessFactor; // Right edge
-    pt.EdgeTess[3] = tessFactor; // Bottom edge
-    
-    pt.InsideTess[0] = tessFactor; // Horizontal inside
-    pt.InsideTess[1] = tessFactor; // Vertical inside
+    pt.InsideTess[0] = CalculateTessFactor(centerLocal, centerLocal); // Horizontal inside
+    pt.InsideTess[1] = CalculateTessFactor(centerLocal, centerLocal); // Vertical inside
 
     return pt;
 }

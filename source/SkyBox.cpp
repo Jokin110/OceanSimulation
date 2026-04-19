@@ -20,8 +20,8 @@ void SkyBox::Update()
 
 	XMMATRIX worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
 
-	m_ConstantBufferData = {};
-	m_ConstantBufferData.m_WorldViewProjectioMatrix = worldMatrix;
+	m_VertexShaderConstantBufferData = {};
+    m_VertexShaderConstantBufferData.m_WorldViewProjectioMatrix = worldMatrix;
 
 	Object::Update();
 }

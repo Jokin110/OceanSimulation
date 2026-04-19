@@ -25,13 +25,13 @@ struct PatchTess
 cbuffer PerObjectBuffer : register(b0)
 {
     row_major matrix m_WorldMatrix;
-    row_major matrix m_InverseTransposeWorldMatrix;
     row_major matrix m_ViewProjectionMatrix;
+    
+    float4 m_PatchSize; // Size of the ocean patch in world units
     
     float3 m_CameraPosition;
     
-    int m_OceanTextureSize; // Size of the ocean texture (e.g., 256x256)
-    float m_PatchSize[4]; // Size of the ocean patch in world units
+    float m_Padding;
 }
 
 Texture2D DisplacementTextureCascade[4] : register(t0);

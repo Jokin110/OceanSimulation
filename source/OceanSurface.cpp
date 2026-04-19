@@ -24,17 +24,22 @@ void OceanSurface::Update()
 
 	XMMATRIX worldMatrix = scaleMatrix * rotationMatrix * translationMatrix;
 
-	m_ConstantBufferData = {};
-	m_ConstantBufferData.m_WorldMatrix = worldMatrix;
-	m_ConstantBufferData.m_InverseTransposeWorldMatrix = XMMatrixTranspose(XMMatrixInverse(nullptr, worldMatrix));
-	m_ConstantBufferData.m_ViewProjectionMatrix = XMMatrixMultiply(CameraManager::GetInstance().GetViewMatrix(), CameraManager::GetInstance().GetProjectionMatrix());
-	m_ConstantBufferData.m_CameraPosition = CameraManager::GetInstance().GetCameraPosition();
-	m_ConstantBufferData.m_OceanTextureSize = OceanComputeManager::GetInstance().GetOceanTextureSize();
+	m_HullShaderConstantBufferData = {};
+	m_HullShaderConstantBufferData.m_WorldMatrix = worldMatrix;
+	m_HullShaderConstantBufferData.m_CameraPosition = CameraManager::GetInstance().GetCameraPosition();
 
-	for (int i = 0; i < OceanComputeManager::GetInstance().m_CascadeNumber; i++)
-	{
-		m_ConstantBufferData.m_PatchSize[i] = OceanComputeManager::GetInstance().GetOceanPatchSize()[i];
-	}
+	TessellationSettingsData tessSettings = OceanComputeManager::GetInstance().GetTessellationSettingsData();
+	m_HullShaderConstantBufferData.m_MinDistance = tessSettings.m_MinTessellationDistance;
+	m_HullShaderConstantBufferData.m_MaxDistance = tessSettings.m_MaxTessellationDistance;
+	m_HullShaderConstantBufferData.m_TessFactorExponent = tessSettings.m_TessellationExponent;
+
+	m_DomainShaderConstantBufferData = {};
+	m_DomainShaderConstantBufferData.m_WorldMatrix = worldMatrix;
+	m_DomainShaderConstantBufferData.m_ViewProjectionMatrix = XMMatrixMultiply(CameraManager::GetInstance().GetViewMatrix(), CameraManager::GetInstance().GetProjectionMatrix());
+	m_DomainShaderConstantBufferData.m_CameraPosition = CameraManager::GetInstance().GetCameraPosition();
+
+	const float* patches = OceanComputeManager::GetInstance().GetOceanPatchSize();
+	m_DomainShaderConstantBufferData.m_PatchSizes = XMFLOAT4(patches[0], patches[1], patches[2], patches[3]);
 
 	Object::Update();
 }
@@ -76,25 +81,38 @@ void OceanSurface::GenerateMesh()
 	int textureSize = OceanComputeManager::GetInstance().GetOceanTextureSize();
 	float patchSize = OceanComputeManager::GetInstance().GetOceanPatchSize()[0];
 
-	int numSubdivisions = 8;
+	float vertexSeparation = OceanComputeManager::GetInstance().GetMeshVertexSeparation();
 
-	int widthVertices = textureSize / numSubdivisions + 1;
-	int depthVertices = textureSize / numSubdivisions + 1;
+	int numVertices = patchSize / vertexSeparation + 1;
 
-	float separation = patchSize / (float)(textureSize / numSubdivisions);
+	float moduleSeparation = (((float) patchSize / vertexSeparation) - numVertices + 1) * vertexSeparation;
 
-	float startX = -((widthVertices - 1) * separation) / 2.0f;
-	float startZ = -((depthVertices - 1) * separation) / 2.0f;
-
-	for (int x = 0; x < widthVertices; x++)
+	if (moduleSeparation > 0.0f)
 	{
-		for (int z = 0; z < depthVertices; z++)
+		numVertices++;
+	}
+
+	float startX = -patchSize / 2.0f;
+	float startZ = -patchSize / 2.0f;
+
+	for (int x = 0; x < numVertices; x++)
+	{
+		for (int z = 0; z < numVertices; z++)
 		{
+			float xSeparation = vertexSeparation;
+			float zSeparation = vertexSeparation;
+
+			if (moduleSeparation > 0.0f)
+			{
+				if (x == numVertices - 1) xSeparation = moduleSeparation;
+				if (z == numVertices - 1 ) zSeparation = moduleSeparation;
+			}
+
 			VertexData vertex = VertexData{};
 
-			vertex.position.x = startX + x * separation;
+			vertex.position.x = startX + (x - 1) * vertexSeparation + xSeparation;
 			vertex.position.y = 0.0f;
-			vertex.position.z = startZ + z * separation;
+			vertex.position.z = startZ + (z - 1) * vertexSeparation + zSeparation;
 
 			vertex.color = XMFLOAT3(0.0f, 0.41f, 0.58f);
 
@@ -102,12 +120,12 @@ void OceanSurface::GenerateMesh()
 		}
 	}
 
-	for (int x = 0; x < widthVertices - 1; x++)
+	for (int x = 0; x < numVertices - 1; x++)
 	{
-		for (int z = 0; z < depthVertices - 1; z++)
+		for (int z = 0; z < numVertices - 1; z++)
 		{
-			int bottomLeftVertex = x * depthVertices + z;
-			int bottomRightVertex = (x + 1) * depthVertices + z;
+			int bottomLeftVertex = x * numVertices + z;
+			int bottomRightVertex = (x + 1) * numVertices + z;
 			int topLeftVertex = bottomLeftVertex + 1;
 			int topRightVertex = bottomRightVertex + 1;
 
@@ -119,9 +137,16 @@ void OceanSurface::GenerateMesh()
 	}
 }
 
-void OceanSurface::UpdatePixelShaderBuffer(const PerObjectPixelShaderBufferData& pixelShaderBufferData)
+void OceanSurface::RegenerateMeshAndPos(Vector3 position)
 {
-	m_PixelShaderBufferData = pixelShaderBufferData;
-	D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(GetPixelShaderBuffers(), 0, nullptr, &m_PixelShaderBufferData, 0, 0);
+	Initialize();
+
+	m_Position = position;
+}
+
+void OceanSurface::UpdatePixelShaderBuffer(const PixelShaderConstantBufferData& pixelShaderBufferData)
+{
+	m_PixelShaderConstantBufferData = pixelShaderBufferData;
+	D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(GetPixelShaderConstantBuffers(), 0, nullptr, &m_PixelShaderConstantBufferData, 0, 0);
 	m_UpdatePixelShaderBuffer = true;
 }

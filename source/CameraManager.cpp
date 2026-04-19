@@ -3,6 +3,7 @@
 #include "D3D11Application.h"
 #include "InputManager.h"
 #include "GLFW/glfw3.h"
+#include <fstream>
 
 #include "imgui.h"
 
@@ -28,6 +29,18 @@ bool CameraManager::Initialize()
 	if (!m_Instance)
 	{
 		m_Instance = new CameraManager;
+
+        std::ifstream inFile("CameraSettings.bin", std::ios::binary);
+        if (inFile.is_open())
+        {
+            inFile.read(reinterpret_cast<char*>(&m_Instance->m_CameraSettings), sizeof(m_Instance->m_CameraSettings));
+            inFile.close();
+
+            m_Instance->m_CameraPosition = m_Instance->m_CameraSettings.m_Position;
+            m_Instance->m_CameraFocusPoint = m_Instance->m_CameraSettings.m_FocusPoint;
+            m_Instance->m_Speed = m_Instance->m_CameraSettings.m_Speed;
+        }
+
 		return true;
 	}
 
@@ -86,4 +99,43 @@ void CameraManager::Update()
 
     m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPosition, upDirection);
     m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(45.0f), static_cast<float>(D3D11Application::GetInstance().GetWindowWidth()) / static_cast<float>(D3D11Application::GetInstance().GetWindowHeight()), 0.1f, 1000.0f);
+
+    ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysAutoResize;
+    ImGui::Begin("Camera Settings", nullptr, windowFlags);
+
+    ImGui::InputFloat3("Camera Position", (float*)&m_CameraPosition);
+    ImGui::InputFloat3("Camera Focus Point", (float*)&m_CameraFocusPoint);
+    ImGui::SliderFloat("Camera Speed", &m_Speed, 0.0f, 100.0f);
+
+    if (ImGui::Button("Save Settings"))
+    {
+        m_CameraSettings.m_Position = m_CameraPosition;
+        m_CameraSettings.m_FocusPoint = m_CameraFocusPoint;
+        m_CameraSettings.m_Speed = m_Speed;
+
+        std::ofstream outFile("CameraSettings.bin", std::ios::binary);
+        if (outFile.is_open())
+        {
+            outFile.write(reinterpret_cast<const char*>(&m_CameraSettings), sizeof(m_CameraSettings));
+            outFile.close();
+        }
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Load Settings"))
+    {
+        std::ifstream inFile("CameraSettings.bin", std::ios::binary);
+        if (inFile.is_open())
+        {
+            inFile.read(reinterpret_cast<char*>(&m_CameraSettings), sizeof(m_CameraSettings));
+            inFile.close();
+
+            m_CameraPosition = m_CameraSettings.m_Position;
+            m_CameraFocusPoint = m_CameraSettings.m_FocusPoint;
+            m_Speed = m_CameraSettings.m_Speed;
+        }
+    }
+
+    ImGui::End();
 }

@@ -33,6 +33,7 @@ bool SceneManager::Initialize()
 		m_Instance->m_PixelShaderSettings.m_FoamColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
 		m_Instance->m_PixelShaderSettings.m_FoamBias = 0.3f;
 		m_Instance->m_PixelShaderSettings.m_DecayFactor = 0.98f;
+		m_Instance->m_PixelShaderSettings.m_FoamAddition = 1.0f;
 		m_Instance->m_PixelShaderSettings.m_LightColor = XMFLOAT3(0.53f, 0.81f, 0.92f);
 		m_Instance->m_PixelShaderSettings.m_AmbientLightIntensity = 0.25f;
 		m_Instance->m_PixelShaderSettings.m_LightDirection = XMFLOAT3(0.0f, -0.5f, -1.0f);
@@ -68,10 +69,13 @@ void SceneManager::Start()
 
 void SceneManager::Update()
 {
-	ImGui::Begin("Ocean Surface Rendering Settings");
+	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysAutoResize;
+	ImGui::Begin("Ocean Surface Rendering Settings", nullptr, windowFlags);
+
 	ImGui::ColorEdit3("Foam Color", (float*)&m_PixelShaderSettings.m_FoamColor);
 	ImGui::SliderFloat("Foam Bias", &m_PixelShaderSettings.m_FoamBias, 0.0f, 1.0f);
 	ImGui::SliderFloat("Decay Factor", &m_PixelShaderSettings.m_DecayFactor, 0.0f, 1.0f);
+	ImGui::SliderFloat("Foam Addition", &m_PixelShaderSettings.m_FoamAddition, 0.0f, 5.0f);
 	ImGui::ColorEdit3("Light Color", (float*)&m_PixelShaderSettings.m_LightColor);
 	ImGui::SliderFloat("Ambient Light Intensity", &m_PixelShaderSettings.m_AmbientLightIntensity, 0.0f, 1.0f);
 	ImGui::SliderFloat3("Light Direction", (float*)&m_PixelShaderSettings.m_LightDirection, -1.0f, 1.0f);
@@ -121,4 +125,12 @@ void SceneManager::Update()
 	}
 
 	ImGui::End();
+}
+
+void SceneManager::RegenerateMeshes()
+{
+	for (int i = 0; i < m_OceanSurfaceSideCount * m_OceanSurfaceSideCount; i++)
+	{
+		m_Ocean[i]->RegenerateMeshAndPos(Vector3((i % m_OceanSurfaceSideCount - (m_OceanSurfaceSideCount - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f), 0.0f, (i / m_OceanSurfaceSideCount - (m_OceanSurfaceSideCount - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f)));
+	}
 }

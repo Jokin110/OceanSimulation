@@ -14,7 +14,9 @@ cbuffer DisplacementAndSlopeParams : register(b0)
     float m_FoamBias;
     float m_DecayFactor;
     float m_DeltaTime;
-    float Padding;
+    float m_FoamAddition;
+    float m_ChoppinessFactor;
+    float3 m_Padding;
 };
 
 [numthreads(16, 16, 1)]
@@ -30,11 +32,11 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     float4 xzyxDerivative = XZYXDerivativeTexture[uv];
     float4 yzzzDerivative = YZZZDerivativeTexture[uv];
     
-    float dxx = zDisplacementXXDerivative.b;
-    float dxz = xzyxDerivative.r;
+    float dxx = zDisplacementXXDerivative.b * m_ChoppinessFactor;
+    float dxz = xzyxDerivative.r * m_ChoppinessFactor;
     float dyx = xzyxDerivative.b;
     float dyz = yzzzDerivative.r;
-    float dzz = yzzzDerivative.b;
+    float dzz = yzzzDerivative.b * m_ChoppinessFactor;
     
     float3 tangent = float3(1.0f + dxx, dyx, dxz);
     float3 binormal = float3(dxz, dyz, 1.0f + dzz);
@@ -51,9 +53,14 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     float jacobian = Jxx * Jzz - Jxz * Jxz;
     
     float foam = saturate(SlopeTexture[uv].a * exp(-m_DecayFactor * m_DeltaTime));
-    foam += jacobian < m_FoamBias ? 1.0f : 0.0f;
+    
+    float jacobianDifference = m_FoamBias - jacobian;
+    
+    if (jacobianDifference > 0.0f)
+        foam += jacobianDifference * m_FoamAddition;
+        
     foam = saturate(foam);
     
-    DisplacementTexture[uv] = float4(xyDisplacement.r, xyDisplacement.b, zDisplacementXXDerivative.r, 0.0f);
+    DisplacementTexture[uv] = float4(xyDisplacement.r * m_ChoppinessFactor, xyDisplacement.b, zDisplacementXXDerivative.r * m_ChoppinessFactor, 0.0f);
     SlopeTexture[uv] = float4(slopeX, slopeZ, 0.0f, foam);
 }

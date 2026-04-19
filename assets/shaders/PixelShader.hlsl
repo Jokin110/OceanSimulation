@@ -23,7 +23,7 @@ cbuffer RenderingValuesBuffer : register(b0)
     float3 m_LightDirection;
     float m_DecayFactor;
     float3 m_SpecularColor;
-    float m_Padding;
+    float m_FoamAddition;
     float3 m_FogColor;
     float m_FogDistance;
     
@@ -118,7 +118,7 @@ PSOutput Main(PSInput input)
     //else
     //    output.Color = SlopeTexture.SampleLevel(LinearSampler, input.Position.xy / float2(1920.0f, 1080.0f) / 0.9f, 0);
     
-    //output.Color = float4(normal, 1.0);
-    
+    //output.Color = float4(input.UVs[3], 0.0f, 1.0f);
+   
     return output;
 }

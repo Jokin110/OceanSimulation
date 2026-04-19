@@ -30,6 +30,7 @@ public:
     // The main functions your OceanComputeManager will call
     void PrecomputeTwiddleFactors();
     void ComputeIFFT2D(ID3D11UnorderedAccessView* inputUAV, ID3D11UnorderedAccessView* pingPongUAV, bool outputToInput, bool scale, bool permute);
+    bool ResizeTextures(int size);
 
 private:
     bool CreateResources();

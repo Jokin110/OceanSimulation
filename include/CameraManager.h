@@ -4,6 +4,13 @@
 
 using namespace DirectX;
 
+struct CameraSettings
+{
+    XMFLOAT3 m_Position;
+    XMFLOAT3 m_FocusPoint;
+    float m_Speed;
+};
+
 class CameraManager
 {
 public:
@@ -25,6 +32,8 @@ public:
 
 private:
     static CameraManager* m_Instance;
+
+    CameraSettings m_CameraSettings;
 
     float m_Speed = 5.0f;
 

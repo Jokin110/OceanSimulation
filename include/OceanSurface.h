@@ -14,20 +14,40 @@ struct VertexData
 };
 
 // Define the structure of the constant buffers for the vertex shader
-struct PerObjectConstantBufferData
+struct VertexShaderConstantBufferData
+{
+	
+};
+
+// Define the structure of the constant buffers for the hull shader
+struct HullShaderConstantBufferData
 {
 	XMMATRIX m_WorldMatrix;
-	XMMATRIX m_InverseTransposeWorldMatrix;
-	XMMATRIX m_ViewProjectionMatrix;
-	
+
 	XMFLOAT3 m_CameraPosition;
 
-	int m_OceanTextureSize; // Size of the ocean texture (e.g., 256x256)
-	float m_PatchSize[4]; // Size of the ocean patch in world units
+	float m_MinDistance;
+	float m_MaxDistance;
+	int m_TessFactorExponent;
+
+	XMFLOAT2 m_Padding;
+};
+
+// Define the structure of the constant buffers for the domain shader
+struct DomainShaderConstantBufferData
+{
+	XMMATRIX m_WorldMatrix;
+	XMMATRIX m_ViewProjectionMatrix;
+
+	XMFLOAT4 m_PatchSizes; // Size of the ocean patch in world units
+
+	XMFLOAT3 m_CameraPosition;
+
+	float m_Padding;
 };
 
 // Define the structure of the constant buffers for the pixel shader
-struct PerObjectPixelShaderBufferData
+struct PixelShaderConstantBufferData
 {
 	XMFLOAT3 m_FoamColor;
 	float m_FoamBias;
@@ -36,7 +56,7 @@ struct PerObjectPixelShaderBufferData
 	XMFLOAT3 m_LightDirection;
 	float m_DecayFactor;
 	XMFLOAT3 m_SpecularColor;
-	float m_Padding; // Padding to ensure 16-byte alignment
+	float m_FoamAddition;
 	XMFLOAT3 m_FogColor;
 	float m_FogDistance;
 
@@ -46,7 +66,7 @@ struct PerObjectPixelShaderBufferData
 	float m_kDiffuse;
 };
 
-class OceanSurface : public Object<VertexData, PerObjectConstantBufferData, PerObjectPixelShaderBufferData>
+class OceanSurface : public Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBufferData, HullShaderConstantBufferData, DomainShaderConstantBufferData>
 {
 public:
 	OceanSurface() : Object() {}
@@ -59,7 +79,9 @@ public:
 	void Start() override;
 	void Update() override;
 
-	void UpdatePixelShaderBuffer(const PerObjectPixelShaderBufferData& pixelShaderBufferData);
+	void RegenerateMeshAndPos(Vector3 position);
+
+	void UpdatePixelShaderBuffer(const PixelShaderConstantBufferData& pixelShaderBufferData);
 
 protected:
 	UINT GetVertexInputLayout(D3D11_INPUT_ELEMENT_DESC*& inputLayout) override;

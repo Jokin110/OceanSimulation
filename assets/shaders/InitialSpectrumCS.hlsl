@@ -107,7 +107,7 @@ float TMACorrection(float omega)
     }
 }
 
-float DirectionalSpreadingFunction(float omega, float waveAngle)
+float DonelanBannerDirectionalSpreadingFunction(float omega, float theta)
 {
     // The directional spreading function models how the energy of the waves is distributed across different directions, which is crucial for creating realistic wave patterns. 
     // It depends on the frequency of the wave and the angle between the wave direction and the wind direction. 
@@ -134,10 +134,42 @@ float DirectionalSpreadingFunction(float omega, float waveAngle)
     
     beta = max(beta, 0.0001f); // Ensure beta is not too small to avoid numerical issues
     
-    float rawDelta = waveAngle - m_WindAngle;
-    float shortestAngleDiff = atan2(sin(rawDelta), cos(rawDelta));
+    return beta / (2.0f * tanh(min(beta * PI, 20.0f))) / pow(cosh(min(beta * theta, 20.0f)), 2);
+}
+
+float SwellDirectionalSpreadingFunction(float omega, float theta)
+{
+    float s_xi = 16 * tanh(min(m_PeakFrequency / omega, 20.0f)) * m_Swell * m_Swell;
     
-    return beta / (2.0f * tanh(min(beta * PI, 20.0f))) / pow(cosh(min(beta * shortestAngleDiff, 20.0f)), 2);
+    return pow(max(abs(cos(theta / 2.0f)), 0.0001f), 2.0f * s_xi);
+}
+
+float DirectionalSpreading(float omega, float theta)
+{
+    float dBase = DonelanBannerDirectionalSpreadingFunction(omega, theta);
+    
+    if (m_Swell <= 0.0001f)
+    {
+        return dBase;
+    }
+    
+    float dSwell = SwellDirectionalSpreadingFunction(omega, theta);
+    
+    float integral = 0.0f;
+    const int STEPS = 32;
+    float dTheta = 2.0f * PI / STEPS;
+    
+    for (int i = 0; i < STEPS; i++)
+    {
+        float thetaI = -PI + i * dTheta;
+        
+        float dBaseDTheta = DonelanBannerDirectionalSpreadingFunction(omega, thetaI);
+        float dSwellDTheta = SwellDirectionalSpreadingFunction(omega, thetaI);
+        
+        integral += dBaseDTheta * dSwellDTheta * dTheta;
+    }
+    
+    return dBase * dSwell / max(integral, 0.0001f);
 }
 
 [numthreads(16, 16, 1)]
@@ -165,9 +197,12 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     
     float waveAngle = atan2(ky, kx);
     
+    float rawDelta = waveAngle - m_WindAngle;
+    float theta = atan2(sin(rawDelta), cos(rawDelta));
+    
     float omega = DispersionRelation(kLength);
     
-    float energyValue = JONSWAPSpectra(omega) * dk * dk * TMACorrection(omega) * DirectionalSpreadingFunction(omega, waveAngle) * DispersionRelationDerivative(kLength, omega) / kLength;
+    float energyValue = JONSWAPSpectra(omega) * dk * dk * TMACorrection(omega) * DirectionalSpreading(omega, theta) * DispersionRelationDerivative(kLength, omega) / kLength;
     
     float2 randomNumber = GenerateRandomGaussianNumbers(x, y);
     
@@ -179,8 +214,10 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     
     float2 oppRandomNumber = GenerateRandomGaussianNumbers(oppX, oppY);
     
-    float oppWaveAngle = waveAngle + PI;
-    float oppEnergyValue = JONSWAPSpectra(omega) * dk * dk * TMACorrection(omega) * DirectionalSpreadingFunction(omega, oppWaveAngle) * DispersionRelationDerivative(kLength, omega) / kLength;
+    float oppWaveAngle = theta + PI;
+    oppWaveAngle = atan2(sin(oppWaveAngle), cos(oppWaveAngle));
+    
+    float oppEnergyValue = JONSWAPSpectra(omega) * dk * dk * TMACorrection(omega) * DirectionalSpreading(omega, oppWaveAngle) * DispersionRelationDerivative(kLength, omega) / kLength;
                            
     float2 h0_opp = sqrt(max(oppEnergyValue, 0.0f) / 2.0f) * oppRandomNumber;
     
