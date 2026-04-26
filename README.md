@@ -1,5 +1,4 @@
 
-
 # 🌊 Real-Time FFT Ocean Simulation
 
 ![C++](https://img.shields.io/badge/Language-C++-00599C?style=for-the-badge&logo=c%2B%2B)
@@ -14,7 +13,7 @@ Based heavily on Jerry Tessendorf's statistical wave models (JONSWAP spectrum), 
 ---
 
 ## 🎥 Visual Showcase
-<video src="https://github.com/Jokin110/OceanSimulation/raw/main/images/oceanSimulation.mp4" controls="controls" muted="muted" style="max-height:640px; width:100%;"></video>
+<video src="https://github.com/user-attachments/assets/469b47ed-de38-4c75-8f88-70787f78406e" autoplay loop muted playsinline style="max-height:640px; width:100%;"></video>
 
 ---
 
