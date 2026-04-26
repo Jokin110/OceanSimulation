@@ -12,7 +12,7 @@ Based heavily on Jerry Tessendorf's statistical wave models (JONSWAP spectrum), 
 ---
 
 ## 🎥 Visual Showcase
-<video src="images/oceanSimulation.mp4" controls="controls" muted="muted" style="max-height:640px; width:100%;"></video>
+<video src="https://raw.githubusercontent.com/Jokin110/OceanSimulation/main/images/oceanSimulation.mp4" controls="controls" muted="muted" style="max-height:640px; width:100%;"></video>
 
 ---
 
