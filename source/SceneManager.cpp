@@ -6,19 +6,27 @@ SceneManager* SceneManager::m_Instance = nullptr;
 
 SceneManager::SceneManager()
 {
-	for (int i = 0; i < m_OceanSurfaceSideCount * m_OceanSurfaceSideCount; i++)
+	for (int i = 0; i < OCEAN_SURFACE_SIDE_COUNT * OCEAN_SURFACE_SIDE_COUNT; i++)
 	{
 		m_Ocean[i] = new OceanSurface("Ocean Surface", L"assets/shaders/OceanSurfaceVS.hlsl", L"assets/shaders/PixelShader.hlsl", L"assets/shaders/OceanSurfaceHS.hlsl", L"assets/shaders/OceanSurfaceDS.hlsl", D3D11_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
 
-		m_Ocean[i]->SetPosition(Vector3((i % m_OceanSurfaceSideCount - (m_OceanSurfaceSideCount - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f), 0.0f, (i / m_OceanSurfaceSideCount - (m_OceanSurfaceSideCount - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0]	 - 0.0f)));
+		m_Ocean[i]->SetPosition(Vector3((i % OCEAN_SURFACE_SIDE_COUNT - (OCEAN_SURFACE_SIDE_COUNT - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f), 0.0f, (i / OCEAN_SURFACE_SIDE_COUNT - (OCEAN_SURFACE_SIDE_COUNT - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f)));
 	}
+
+	m_SkyBox = new SkyBox("SkyBox");
 }
 
 SceneManager::~SceneManager()
 {
+	for (int i = 0; i < OCEAN_SURFACE_SIDE_COUNT * OCEAN_SURFACE_SIDE_COUNT; i++)
+	{
+		m_Ocean[i] = nullptr;
+	}
+
+	m_SkyBox = nullptr;
+
 	if (m_Instance)
 	{
-		delete m_Instance;
 		m_Instance = nullptr;
 	}
 }
@@ -127,10 +135,14 @@ void SceneManager::Update()
 	ImGui::End();
 }
 
-void SceneManager::RegenerateMeshes()
+bool SceneManager::RegenerateMeshes()
 {
-	for (int i = 0; i < m_OceanSurfaceSideCount * m_OceanSurfaceSideCount; i++)
+	for (int i = 0; i < OCEAN_SURFACE_SIDE_COUNT * OCEAN_SURFACE_SIDE_COUNT; i++)
 	{
-		m_Ocean[i]->RegenerateMeshAndPos(Vector3((i % m_OceanSurfaceSideCount - (m_OceanSurfaceSideCount - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f), 0.0f, (i / m_OceanSurfaceSideCount - (m_OceanSurfaceSideCount - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f)));
+		if (!m_Ocean[i]->RegenerateMeshAndPos(Vector3((i % OCEAN_SURFACE_SIDE_COUNT - (OCEAN_SURFACE_SIDE_COUNT - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f), 0.0f, (i / OCEAN_SURFACE_SIDE_COUNT - (OCEAN_SURFACE_SIDE_COUNT - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f)))) return false;
+		
+		m_Ocean[i]->UpdatePixelShaderBuffer(m_PixelShaderSettings);
 	}
+
+	return true;
 }

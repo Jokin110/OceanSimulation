@@ -3,6 +3,8 @@
 #include <d3d11.h>
 #include <string>
 
+#include "Texture2D.h"
+
 using namespace std;
 
 struct FFTParams
@@ -24,11 +26,21 @@ public:
         return *m_Instance;
     }
 
+    static void DestroyInstance()
+    {
+        if (m_Instance)
+        {
+            delete m_Instance;
+            m_Instance = nullptr;
+        }
+    }
+
     // Pass the ocean texture size here so we can create the precomputed data texture
     static bool Initialize(int size);
 
     // The main functions your OceanComputeManager will call
     void PrecomputeTwiddleFactors();
+    void ComputeFFT2D(ID3D11UnorderedAccessView* inputUAV, ID3D11UnorderedAccessView* pingPongUAV, bool outputToInput, bool scale, bool permute);
     void ComputeIFFT2D(ID3D11UnorderedAccessView* inputUAV, ID3D11UnorderedAccessView* pingPongUAV, bool outputToInput, bool scale, bool permute);
     bool ResizeTextures(int size);
 
@@ -45,9 +57,7 @@ private:
     ID3D11Buffer* m_d3dFFTParamsBuffer = nullptr;
 
     // Precomputed Twiddle Factors and Indices
-    ID3D11Texture2D* m_PrecomputedDataTexture = nullptr;
-    ID3D11UnorderedAccessView* m_PrecomputedDataUAV = nullptr;
-    ID3D11ShaderResourceView* m_PrecomputedDataSRV = nullptr;
+    Texture2D* m_PrecomputedDataTexture = nullptr;
 
     wstring m_FFTComputeShaderFile = L"assets/shaders/FFTCS.hlsl";
 

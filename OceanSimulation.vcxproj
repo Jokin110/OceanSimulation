@@ -28,6 +28,7 @@
     <ClInclude Include="include\OceanSurface.h" />
     <ClInclude Include="include\SceneManager.h" />
     <ClInclude Include="include\SkyBox.h" />
+    <ClInclude Include="include\Texture2D.h" />
     <ClInclude Include="include\TimeManager.h" />
     <ClInclude Include="include\Vector3.h" />
     <ClInclude Include="include\WindowApplication.h" />
@@ -49,6 +50,7 @@
     <ClCompile Include="source\OceanSurface.cpp" />
     <ClCompile Include="source\SceneManager.cpp" />
     <ClCompile Include="source\SkyBox.cpp" />
+    <ClCompile Include="source\Texture2D.cpp" />
     <ClCompile Include="source\TimeManager.cpp" />
     <ClCompile Include="source\Vector3.cpp" />
     <ClCompile Include="source\WindowApplication.cpp" />
@@ -110,6 +112,18 @@
     <FxCompile Include="assets\shaders\PixelShader.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="assets\shaders\SkyBoxPS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+    </FxCompile>
+    <FxCompile Include="assets\shaders\SkyBoxVS.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
     </FxCompile>
     <FxCompile Include="assets\shaders\SumOfSinesVS.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
@@ -210,7 +224,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)imgui\backends;$(SolutionDir)imgui;$(SolutionDir)glfw-3.4\include;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)imgui\backends;$(SolutionDir)imgui;$(SolutionDir)glfw-3.4\include;$(SolutionDir)stb\include;$(SolutionDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -231,7 +245,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)imgui\backends;$(SolutionDir)imgui;$(SolutionDir)glfw-3.4\include;$(SolutionDir)include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)imgui\backends;$(SolutionDir)imgui;$(SolutionDir)glfw-3.4\include;$(SolutionDir)stb\include;$(SolutionDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

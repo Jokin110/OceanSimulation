@@ -27,7 +27,16 @@ D3D11Application::~D3D11Application()
 {
     CleanupImGui();
 
+    ObjectManager::DestroyInstance();
+    SceneManager::DestroyInstance();
+    CameraManager::DestroyInstance();
+    OceanComputeManager::DestroyInstance();
+    FFTManager::DestroyInstance();
+    InputManager::DestroyInstance();
+    TimeManager::DestroyInstance();
+
 	// Ensure all pointers are released
+    if (m_d3dDeviceContext) m_d3dDeviceContext->ClearState();
     m_d3dDeviceContext->Flush();
     SafeRelease(m_d3dRasterizerState[0]);
     SafeRelease(m_d3dRasterizerState[1]);
@@ -139,6 +148,37 @@ bool D3D11Application::Initialize()
         return false;
 	}
 
+    D3D11_RASTERIZER_DESC rasterizerDesc = {};
+
+    rasterizerDesc.AntialiasedLineEnable = FALSE;
+    rasterizerDesc.CullMode = D3D11_CULL_BACK;
+    rasterizerDesc.DepthBias = 0;
+    rasterizerDesc.DepthBiasClamp = 0.0f;
+    rasterizerDesc.DepthClipEnable = TRUE;
+    rasterizerDesc.FillMode = D3D11_FILL_SOLID;
+    rasterizerDesc.FrontCounterClockwise = FALSE;
+    rasterizerDesc.MultisampleEnable = FALSE;
+    rasterizerDesc.ScissorEnable = FALSE;
+    rasterizerDesc.SlopeScaledDepthBias = 0.0f;
+
+    if (FAILED(m_d3dDevice->CreateRasterizerState(
+        &rasterizerDesc,
+        &m_d3dRasterizerState[0])))
+    {
+        cout << "D3D11: Failed to create rasterizer state." << endl;
+        return false;
+    }
+
+    rasterizerDesc.FillMode = D3D11_FILL_WIREFRAME;
+
+    if (FAILED(m_d3dDevice->CreateRasterizerState(
+        &rasterizerDesc,
+        &m_d3dRasterizerState[1])))
+    {
+        cout << "D3D11: Failed to create rasterizer state." << endl;
+        return false;
+    }
+
     m_d3dViewport.TopLeftX = 0;
     m_d3dViewport.TopLeftY = 0;
     m_d3dViewport.Width = static_cast<float>(GetWindowWidth());
@@ -161,6 +201,8 @@ bool D3D11Application::Initialize()
 
 bool D3D11Application::InitializeManagers()
 {
+    srand(time(NULL));
+
     if (!TimeManager::Initialize())
     {
         return false;
@@ -240,6 +282,7 @@ bool D3D11Application::CreateSwapchainResources()
     if (FAILED(m_d3dDevice->CreateRenderTargetView(backBuffer, nullptr, &m_d3dRenderTargetView)))
     {
         cout << "D3D11: Failed to create render target view for the back buffer." << endl;
+        SafeRelease(backBuffer);
         return false;
     }
 
@@ -296,37 +339,6 @@ bool D3D11Application::CreateDepthStencilResources()
         return false;
 	}
 
-	D3D11_RASTERIZER_DESC rasterizerDesc = {};
-
-	rasterizerDesc.AntialiasedLineEnable = FALSE;
-	rasterizerDesc.CullMode = D3D11_CULL_BACK;
-	rasterizerDesc.DepthBias = 0;
-	rasterizerDesc.DepthBiasClamp = 0.0f;
-	rasterizerDesc.DepthClipEnable = TRUE;
-	rasterizerDesc.FillMode = D3D11_FILL_SOLID;
-    rasterizerDesc.FrontCounterClockwise = FALSE;
-	rasterizerDesc.MultisampleEnable = FALSE;
-	rasterizerDesc.ScissorEnable = FALSE;
-    rasterizerDesc.SlopeScaledDepthBias = 0.0f;
-
-    if (FAILED(m_d3dDevice->CreateRasterizerState(
-        &rasterizerDesc,
-        &m_d3dRasterizerState[0])))
-    {
-        cout << "D3D11: Failed to create rasterizer state." << endl;
-        return false;
-    }
-
-    rasterizerDesc.FillMode = D3D11_FILL_WIREFRAME;
-    
-    if (FAILED(m_d3dDevice->CreateRasterizerState(
-        &rasterizerDesc,
-        &m_d3dRasterizerState[1])))
-    {
-        cout << "D3D11: Failed to create rasterizer state." << endl;
-        return false;
-    }
-
 	return true;
 }
 
@@ -353,8 +365,6 @@ void D3D11Application::DestroyDepthStencilResources()
     SafeRelease(m_d3dDepthStencilView);
     SafeRelease(m_d3dDepthStencilBuffer);
     SafeRelease(m_d3dDepthStencilState);
-    SafeRelease(m_d3dRasterizerState[0]);
-    SafeRelease(m_d3dRasterizerState[1]);
 }
 
 void D3D11Application::ClearScreen(const float clearColor[4], float clearDepth, UINT8 clearStencil)
@@ -375,10 +385,17 @@ void D3D11Application::Present(bool vSync)
 void D3D11Application::OnResize(const int32_t width, const int32_t height)
 {
     WindowApplication::OnResize(width, height);
+
+    if (width == 0 || height == 0)
+    {
+        return;
+	}
+
+    m_d3dDeviceContext->ClearState();
     m_d3dDeviceContext->Flush();
 
     DestroySwapchainResources();
-    //DestroyDepthStencilResources();
+    DestroyDepthStencilResources();
 
     if (FAILED(m_d3dSwapChain->ResizeBuffers(
         0,
@@ -392,7 +409,10 @@ void D3D11Application::OnResize(const int32_t width, const int32_t height)
     }
 
     CreateSwapchainResources();
-    //CreateDepthStencilResources();
+    CreateDepthStencilResources();
+
+    m_d3dViewport.Width = static_cast<float>(width);
+    m_d3dViewport.Height = static_cast<float>(height);
 }
 
 void D3D11Application::Update()
@@ -433,6 +453,11 @@ void D3D11Application::Render()
     {
         auto object = ObjectManager::GetInstance().GetObjectList()[i];
 
+        if (!object->IsInitialized())
+        {
+            continue;
+		}
+
         m_d3dDeviceContext->IASetPrimitiveTopology(object->GetTopology());
 
         const UINT vertexStride = object->GetVertexStride();
@@ -444,39 +469,63 @@ void D3D11Application::Render()
 
         m_d3dDeviceContext->IASetIndexBuffer(object->GetIndexBuffer(), DXGI_FORMAT::DXGI_FORMAT_R32_UINT, 0);
 
+        // Vertex shader
         m_d3dDeviceContext->VSSetShader(object->GetVertexShader(), nullptr, 0);
         m_d3dDeviceContext->VSSetConstantBuffers(0, 1, &object->GetVertexShaderConstantBuffers());
 
-        if (object->UseTessellation())
+        if (object->GetVertexShaderSRVCount() > 0)
         {
-            m_d3dDeviceContext->HSSetShader(object->GetHullShader(), nullptr, 0);
-            m_d3dDeviceContext->HSSetConstantBuffers(0, 1, &object->GetHullShaderConstantBuffers());
+            m_d3dDeviceContext->VSSetShaderResources(0, object->GetVertexShaderSRVCount(), object->GetVertexShaderSRVs());
+            m_d3dDeviceContext->VSSetSamplers(0, 1, &object->GetSamplerState());
+        }
 
-            m_d3dDeviceContext->DSSetShader(object->GetDomainShader(), nullptr, 0);
-            m_d3dDeviceContext->DSSetConstantBuffers(0, 1, &object->GetDomainShaderConstantBuffers());
+        // Hull shader
+        m_d3dDeviceContext->HSSetShader(object->GetHullShader(), nullptr, 0);
+        m_d3dDeviceContext->HSSetConstantBuffers(0, 1, &object->GetHullShaderConstantBuffers());
 
-            //ID3D11ShaderResourceView* oceanSRV[1] = { OceanComputeManager::GetInstance().GetDisplacementSRV() };
-            m_d3dDeviceContext->DSSetShaderResources(0, CASCADE_COUNT, OceanComputeManager::GetInstance().GetDisplacementSRV());
+        if (object->GetHullShaderSRVCount() > 0)
+        {
+            m_d3dDeviceContext->HSSetShaderResources(0, object->GetHullShaderSRVCount(), object->GetHullShaderSRVs());
+            m_d3dDeviceContext->HSSetSamplers(0, 1, &object->GetSamplerState());
+        }
+
+		// Domain shader
+        m_d3dDeviceContext->DSSetShader(object->GetDomainShader(), nullptr, 0);
+        m_d3dDeviceContext->DSSetConstantBuffers(0, 1, &object->GetDomainShaderConstantBuffers());
+
+        if (object->GetDomainShaderSRVCount() > 0)
+        {
+            m_d3dDeviceContext->DSSetShaderResources(0, object->GetDomainShaderSRVCount(), object->GetDomainShaderSRVs());
             m_d3dDeviceContext->DSSetSamplers(0, 1, &object->GetSamplerState());
         }
 
+		// Pixel shader
         m_d3dDeviceContext->PSSetShader(object->GetPixelShader(), nullptr, 0);
+        m_d3dDeviceContext->PSSetConstantBuffers(0, 1, &object->GetPixelShaderConstantBuffers());
 
-        //ID3D11ShaderResourceView* pixelShaderSRV[1] = { OceanComputeManager::GetInstance().GetSlopeSRV() };
-        m_d3dDeviceContext->PSSetShaderResources(0, CASCADE_COUNT, OceanComputeManager::GetInstance().GetSlopeSRV());
-		m_d3dDeviceContext->PSSetSamplers(0, 1, &object->GetSamplerState());
-
-        if (object->GetUpdatePixelShaderBuffer())
+        if (object->GetPixelShaderSRVCount() > 0)
         {
-            m_d3dDeviceContext->PSSetConstantBuffers(0, 1, &object->GetPixelShaderConstantBuffers());
-            object->SetUpdatePixelShaderBuffer(false);
+            m_d3dDeviceContext->PSSetShaderResources(0, object->GetPixelShaderSRVCount(), object->GetPixelShaderSRVs());
+            m_d3dDeviceContext->PSSetSamplers(0, 1, &object->GetSamplerState());
         }
 
+		// Draw the object
         m_d3dDeviceContext->DrawIndexed(object->GetIndexCount(), 0, 0);
 
-        ID3D11ShaderResourceView* nullSRV[CASCADE_COUNT] = { nullptr };
-        m_d3dDeviceContext->DSSetShaderResources(0, CASCADE_COUNT, nullSRV);
-        m_d3dDeviceContext->PSSetShaderResources(0, CASCADE_COUNT, nullSRV);
+		// Unbind shader resources after drawing the object to prevent them from being used by other objects
+        ID3D11ShaderResourceView* nullSRVs[16] = { nullptr };
+
+        UINT vsCount = object->GetVertexShaderSRVCount();
+        if (vsCount > 0) m_d3dDeviceContext->VSSetShaderResources(0, vsCount, nullSRVs);
+
+        UINT hsCount = object->GetHullShaderSRVCount();
+        if (hsCount > 0) m_d3dDeviceContext->HSSetShaderResources(0, hsCount, nullSRVs);
+
+        UINT dsCount = object->GetDomainShaderSRVCount();
+        if (dsCount > 0) m_d3dDeviceContext->DSSetShaderResources(0, dsCount, nullSRVs);
+
+        UINT psCount = object->GetPixelShaderSRVCount();
+        if (psCount > 0) m_d3dDeviceContext->PSSetShaderResources(0, psCount, nullSRVs);
     }
 
     ImGui::Render();
@@ -511,12 +560,16 @@ bool D3D11Application::CompileShader(const wstring& fileName, const string& entr
         {
             cout << "D3D11: With message: " << 
                 static_cast<char*>(errorBlob->GetBufferPointer()) << "\n";
+
+            errorBlob->Release();
         }
 
         return false;
     }
 
     shaderBlob = tempShaderBlob;
+
+    if (errorBlob) errorBlob->Release();
 
     return true;
 }
@@ -537,6 +590,7 @@ ID3D11VertexShader* D3D11Application::CreateVertexShader(const wstring& fileName
         &vertexShader)))
     {
         cout << "D3D11: Failed to compile vertex shader\n";
+        vertexShaderBlob->Release();
         return nullptr;
     }
 
@@ -561,8 +615,11 @@ ID3D11PixelShader* D3D11Application::CreatePixelShader(const wstring& fileName) 
         &pixelShader)))
     {
         cout << "D3D11: Failed to compile pixel shader\n";
+        pixelShaderBlob->Release();
         return nullptr;
     }
+
+	pixelShaderBlob->Release();
 
     return pixelShader;
 }
@@ -585,8 +642,11 @@ ID3D11HullShader* D3D11Application::CreateHullShader(const wstring& fileName) co
         &hullShader)))
     {
         cout << "D3D11: Failed to compile hull shader\n";
+        hullShaderBlob->Release();
         return nullptr;
     }
+
+	hullShaderBlob->Release();
 
     return hullShader;
 }
@@ -609,8 +669,11 @@ ID3D11DomainShader* D3D11Application::CreateDomainShader(const wstring& fileName
         &domainShader)))
     {
         cout << "D3D11: Failed to create domain shader\n";
-		return nullptr;
+        shaderBlob->Release();
+        return nullptr;
     }
+
+	shaderBlob->Release();
 
     return domainShader;
 }
@@ -633,8 +696,11 @@ ID3D11ComputeShader* D3D11Application::CreateComputeShader(const wstring& fileNa
         &computeShader)))
     {
         cout << "D3D11: Failed to create compute shader\n";
+        shaderBlob->Release();
         return nullptr;
     }
+
+    shaderBlob->Release();
 
     return computeShader;
 }
@@ -657,8 +723,11 @@ ID3D11ComputeShader* D3D11Application::CreateComputeShaderWithEntry(const wstrin
         &computeShader)))
     {
         cout << "D3D11: Failed to create compute shader\n";
+        shaderBlob->Release();
         return nullptr;
     }
+
+    shaderBlob->Release();
 
     return computeShader;
 }

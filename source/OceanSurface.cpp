@@ -4,9 +4,21 @@
 #include "imgui.h"
 #include <fstream>
 
+OceanSurface::~OceanSurface()
+{
+	
+}
+
 bool OceanSurface::Initialize()
 {
 	bool result = Object::Initialize();
+
+	m_Initialized = false;
+
+	m_DomainShaderSRVCount = CASCADE_COUNT;
+	m_PixelShaderSRVCount = CASCADE_COUNT;
+
+	m_Initialized = true;
 
 	return result;
 }
@@ -44,6 +56,16 @@ void OceanSurface::Update()
 	Object::Update();
 }
 
+ID3D11ShaderResourceView* const* OceanSurface::GetDomainShaderSRVs()
+{
+	return OceanComputeManager::GetInstance().GetDisplacementSRV();
+}
+
+ID3D11ShaderResourceView* const* OceanSurface::GetPixelShaderSRVs()
+{
+	return OceanComputeManager::GetInstance().GetSlopeSRV();
+}
+
 UINT OceanSurface::GetVertexInputLayout(D3D11_INPUT_ELEMENT_DESC*& inputLayout)
 {
 	static D3D11_INPUT_ELEMENT_DESC vertexInputLayout[] =
@@ -53,7 +75,7 @@ UINT OceanSurface::GetVertexInputLayout(D3D11_INPUT_ELEMENT_DESC*& inputLayout)
 			0,
 			DXGI_FORMAT_R32G32B32_FLOAT,
 			0,
-			offsetof(VertexData, position),
+			offsetof(VertexData, m_Position),
 			D3D11_INPUT_PER_VERTEX_DATA,
 			0
 		},
@@ -62,7 +84,7 @@ UINT OceanSurface::GetVertexInputLayout(D3D11_INPUT_ELEMENT_DESC*& inputLayout)
 			0,
 			DXGI_FORMAT_R32G32B32_FLOAT,
 			0,
-			offsetof(VertexData, color),
+			offsetof(VertexData, m_Color),
 			D3D11_INPUT_PER_VERTEX_DATA,
 			0
 		}
@@ -81,16 +103,11 @@ void OceanSurface::GenerateMesh()
 	int textureSize = OceanComputeManager::GetInstance().GetOceanTextureSize();
 	float patchSize = OceanComputeManager::GetInstance().GetOceanPatchSize()[0];
 
-	float vertexSeparation = OceanComputeManager::GetInstance().GetMeshVertexSeparation();
+	float vertexSeparation = max(OceanComputeManager::GetInstance().GetMeshVertexSeparation(), 0.1f);
 
-	int numVertices = patchSize / vertexSeparation + 1;
+	int numVertices = max(min(patchSize / vertexSeparation + 1, 250), 2);
 
-	float moduleSeparation = (((float) patchSize / vertexSeparation) - numVertices + 1) * vertexSeparation;
-
-	if (moduleSeparation > 0.0f)
-	{
-		numVertices++;
-	}
+	vertexSeparation = patchSize / (numVertices - 1);
 
 	float startX = -patchSize / 2.0f;
 	float startZ = -patchSize / 2.0f;
@@ -99,22 +116,13 @@ void OceanSurface::GenerateMesh()
 	{
 		for (int z = 0; z < numVertices; z++)
 		{
-			float xSeparation = vertexSeparation;
-			float zSeparation = vertexSeparation;
-
-			if (moduleSeparation > 0.0f)
-			{
-				if (x == numVertices - 1) xSeparation = moduleSeparation;
-				if (z == numVertices - 1 ) zSeparation = moduleSeparation;
-			}
-
 			VertexData vertex = VertexData{};
 
-			vertex.position.x = startX + (x - 1) * vertexSeparation + xSeparation;
-			vertex.position.y = 0.0f;
-			vertex.position.z = startZ + (z - 1) * vertexSeparation + zSeparation;
+			vertex.m_Position.x = startX + x * vertexSeparation;
+			vertex.m_Position.y = 0.0f;
+			vertex.m_Position.z = startZ + z * vertexSeparation;
 
-			vertex.color = XMFLOAT3(0.0f, 0.41f, 0.58f);
+			vertex.m_Color = XMFLOAT3(0.0f, 0.41f, 0.58f);
 
 			m_Vertices.push_back(vertex);
 		}
@@ -137,16 +145,23 @@ void OceanSurface::GenerateMesh()
 	}
 }
 
-void OceanSurface::RegenerateMeshAndPos(Vector3 position)
+bool OceanSurface::RegenerateMeshAndPos(Vector3 position)
 {
-	Initialize();
+	ReleaseResources();
+
+	bool value = Initialize();
 
 	m_Position = position;
+
+	return value;
 }
 
 void OceanSurface::UpdatePixelShaderBuffer(const PixelShaderConstantBufferData& pixelShaderBufferData)
 {
 	m_PixelShaderConstantBufferData = pixelShaderBufferData;
-	D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(GetPixelShaderConstantBuffers(), 0, nullptr, &m_PixelShaderConstantBufferData, 0, 0);
-	m_UpdatePixelShaderBuffer = true;
+
+	if (GetPixelShaderConstantBuffers())
+	{
+		D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(GetPixelShaderConstantBuffers(), 0, nullptr, &m_PixelShaderConstantBufferData, 0, 0);
+	}
 }

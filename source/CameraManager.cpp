@@ -13,13 +13,14 @@ CameraManager::CameraManager()
 {
     m_ViewMatrix = XMMATRIX();
 	m_ProjectionMatrix = XMMATRIX();
+
+	m_CameraSettings = {};
 }
 
 CameraManager::~CameraManager()
 {
 	if (m_Instance)
 	{
-		delete m_Instance;
 		m_Instance = nullptr;
 	}
 }

@@ -16,7 +16,6 @@ TimeManager::~TimeManager()
 {
 	if (m_Instance)
 	{
-		delete m_Instance;
 		m_Instance = nullptr;
 	}
 }
@@ -46,6 +45,7 @@ void TimeManager::Update()
 	m_UnscaledTime += m_UnscaledDeltaTime;
 
 	ImGui::Begin("FPS");
-	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", m_UnscaledDeltaTime * 1000.0f, 1.0f / m_UnscaledDeltaTime);
+	float deltaTime = m_UnscaledDeltaTime > 0.0f ? m_UnscaledDeltaTime : 0.00001f; // Avoid division by zero
+	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", m_UnscaledDeltaTime * 1000.0f, 1.0f / deltaTime);
 	ImGui::End();
 }

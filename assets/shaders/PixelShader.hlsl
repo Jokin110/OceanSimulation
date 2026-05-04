@@ -112,13 +112,6 @@ PSOutput Main(PSInput input)
     finalColor += m_FogColor * saturate(length(input.WorldPosition - input.EyePos) / m_FogDistance);
     
     output.Color = float4(finalColor, 1.0);
-    
-    //if (m_Snell <= 1.5f)
-    //    output.Color = DisplacementTexture.SampleLevel(LinearSampler, input.Position.xy / float2(1920.0f, 1080.0f) / 0.9f, 0);
-    //else
-    //    output.Color = SlopeTexture.SampleLevel(LinearSampler, input.Position.xy / float2(1920.0f, 1080.0f) / 0.9f, 0);
-    
-    //output.Color = float4(input.UVs[3], 0.0f, 1.0f);
    
     return output;
 }

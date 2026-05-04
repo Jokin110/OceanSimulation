@@ -4,6 +4,8 @@
 #include "SkyBox.h"
 #include <DirectXMath.h>
 
+const int OCEAN_SURFACE_SIDE_COUNT = 5;
+
 class SceneManager
 {
 public:
@@ -15,11 +17,20 @@ public:
         return *m_Instance;
     }
 
+    static void DestroyInstance()
+    {
+        if (m_Instance)
+        {
+            delete m_Instance;
+            m_Instance = nullptr;
+        }
+    }
+
     static bool Initialize();
     void Start();
     void Update();
 
-    void RegenerateMeshes();
+    bool RegenerateMeshes();
 
 	float GetFoamBias() const { return m_PixelShaderSettings.m_FoamBias; }
 	float GetDecayFactor() const { return m_PixelShaderSettings.m_DecayFactor; }
@@ -30,9 +41,7 @@ private:
 
     PixelShaderConstantBufferData m_PixelShaderSettings;
 
-	static const int m_OceanSurfaceSideCount = 5; // Number of ocean surfaces along one side of the grid (total surfaces = oceanSurfaceSideCount^2)
-
-    OceanSurface* m_Ocean[m_OceanSurfaceSideCount * m_OceanSurfaceSideCount] = { nullptr};
-    //SkyBox m_SkyBox = SkyBox("SkyBox");
+    OceanSurface* m_Ocean[OCEAN_SURFACE_SIDE_COUNT * OCEAN_SURFACE_SIDE_COUNT] = { nullptr };
+    SkyBox* m_SkyBox = nullptr;
 };
 

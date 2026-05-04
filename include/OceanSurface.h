@@ -9,8 +9,8 @@ using namespace DirectX;
 // Define the vertex data structure
 struct VertexData
 {
-	XMFLOAT3 position;
-	XMFLOAT3 color;
+	XMFLOAT3 m_Position;
+	XMFLOAT3 m_Color;
 };
 
 // Define the structure of the constant buffers for the vertex shader
@@ -69,17 +69,17 @@ struct PixelShaderConstantBufferData
 class OceanSurface : public Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBufferData, HullShaderConstantBufferData, DomainShaderConstantBufferData>
 {
 public:
-	OceanSurface() : Object() {}
-	OceanSurface(string name) : Object(name) {}
-	OceanSurface(string name, wstring vertexShaderFile, wstring pixelShaderFile) : Object(name, vertexShaderFile, pixelShaderFile) {}
-	OceanSurface(string name, wstring hullShaderFile, wstring domainShaderFile, D3D11_PRIMITIVE_TOPOLOGY topology) : Object(name, hullShaderFile, domainShaderFile, topology) {}
 	OceanSurface(string name, wstring vertexShaderFile, wstring pixelShaderFile, wstring hullShaderFile, wstring domainShaderFile, D3D11_PRIMITIVE_TOPOLOGY topology) : Object(name, vertexShaderFile, pixelShaderFile, hullShaderFile, domainShaderFile, topology) {}
+	~OceanSurface();
 
 	bool Initialize() override;
 	void Start() override;
 	void Update() override;
 
-	void RegenerateMeshAndPos(Vector3 position);
+	ID3D11ShaderResourceView* const* GetDomainShaderSRVs() override;
+	ID3D11ShaderResourceView* const* GetPixelShaderSRVs() override;
+
+	bool RegenerateMeshAndPos(Vector3 position);
 
 	void UpdatePixelShaderBuffer(const PixelShaderConstantBufferData& pixelShaderBufferData);
 
@@ -87,6 +87,5 @@ protected:
 	UINT GetVertexInputLayout(D3D11_INPUT_ELEMENT_DESC*& inputLayout) override;
 
 	void GenerateMesh() override;
-
 };
 

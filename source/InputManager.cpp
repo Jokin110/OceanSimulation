@@ -13,7 +13,6 @@ InputManager::~InputManager()
 {
 	if (m_Instance)
 	{
-		delete m_Instance;
 		m_Instance = nullptr;
 	}
 }

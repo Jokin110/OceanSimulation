@@ -3,6 +3,7 @@
 #include <d3d11.h>
 #include <string>
 #include <DirectXMath.h>
+#include "Texture2D.h"
 
 using namespace std;
 using namespace DirectX;
@@ -87,6 +88,15 @@ public:
         return *m_Instance;
     }
 
+	static void DestroyInstance()
+	{
+		if (m_Instance)
+		{
+			delete m_Instance;
+			m_Instance = nullptr;
+		}
+	}
+
     static bool Initialize();
     void Start();
     void Update();
@@ -95,9 +105,9 @@ public:
 	const float* GetOceanPatchSize() const { return m_OceanSimulationCascadeSettings.m_OceanPatchSize; } 
 	float GetMeshVertexSeparation() const { return m_OceanSimulationCascadeSettings.m_MeshVertexSeparation; }
 
-    ID3D11ShaderResourceView* const* GetInitialSpectrumSRV() const { return m_InitialSpectrumSRV; }
-	ID3D11ShaderResourceView* const* GetDisplacementSRV() const { return m_DisplacementSRV; }
-	ID3D11ShaderResourceView* const* GetSlopeSRV() const { return m_SlopeSRV; }
+    ID3D11ShaderResourceView* const* GetInitialSpectrumSRV() const { return m_InitialSpectrumTexture->GetTextureSRVs(); }
+	ID3D11ShaderResourceView* const* GetDisplacementSRV() const { return m_DisplacementTexture->GetTextureSRVs(); }
+	ID3D11ShaderResourceView* const* GetSlopeSRV() const { return m_SlopeTexture->GetTextureSRVs(); }
 
 	TessellationSettingsData GetTessellationSettingsData() { return m_TessellationSettingsData; }
 
@@ -115,12 +125,17 @@ private:
 	void UpdateCascadeSettingsUI();
 
 	bool CreateTextureAndViews();
+	bool CreateBuffers();
 	bool CreateComputeShaders();
 
 	bool ReinitializeTexturesMeshesAndSpectrum();
 	void RecalculateFrequencyFilters();
+	bool ResizeTextures();
 
 	void ApplyCascadeSettings(bool apply);
+
+	void ReleaseTextureResources();
+	void DeleteTextureObject(Texture2D* &texture);
 
     static OceanComputeManager* m_Instance;
 
@@ -151,43 +166,24 @@ private:
 	wstring m_DisplacementAndSlopeComputeShaderFile = L"assets/shaders/DisplacementAndSlopeCS.hlsl";
 
 	// Initial spectrum resources
-	ID3D11Texture2D* m_InitialSpectrumTexture[CASCADE_COUNT] = { nullptr };
-    ID3D11UnorderedAccessView* m_InitialSpectrumUAV[CASCADE_COUNT] = { nullptr };
-    ID3D11ShaderResourceView* m_InitialSpectrumSRV[CASCADE_COUNT] = { nullptr };
+	Texture2D* m_InitialSpectrumTexture = nullptr;
 
 	// Displacement and slope calculations resources
-	ID3D11Texture2D* m_XYDisplacementTexture[CASCADE_COUNT] = { nullptr };
-	ID3D11UnorderedAccessView* m_XYDisplacementUAV[CASCADE_COUNT] = { nullptr };
-	ID3D11ShaderResourceView* m_XYDisplacementSRV[CASCADE_COUNT] = { nullptr };
-	ID3D11Texture2D* m_XYDisplacementPingPongTexture[CASCADE_COUNT] = { nullptr };
-	ID3D11UnorderedAccessView* m_XYDisplacementPingPongUAV[CASCADE_COUNT] = { nullptr };
+	Texture2D* m_XYDisplacementTexture = nullptr;
+	Texture2D* m_XYDisplacementPingPongTexture = nullptr;
 
-	ID3D11Texture2D* m_ZDisplacementXXDerivativeTexture[CASCADE_COUNT] = { nullptr };
-	ID3D11UnorderedAccessView* m_ZDisplacementXXDerivativeUAV[CASCADE_COUNT] = { nullptr };
-	ID3D11ShaderResourceView* m_ZDisplacementXXDerivativeSRV[CASCADE_COUNT] = { nullptr };
-	ID3D11Texture2D* m_ZDisplacementXXDerivativePingPongTexture[CASCADE_COUNT] = { nullptr };
-	ID3D11UnorderedAccessView* m_ZDisplacementXXDerivativePingPongUAV[CASCADE_COUNT] = { nullptr };
+	Texture2D* m_ZDisplacementXXDerivativeTexture = nullptr;
+	Texture2D* m_ZDisplacementXXDerivativePingPongTexture = nullptr;
 
-	ID3D11Texture2D* m_XZYXDerivativeTexture[CASCADE_COUNT] = { nullptr };
-	ID3D11UnorderedAccessView* m_XZYXDerivativeUAV[CASCADE_COUNT] = { nullptr };
-	ID3D11ShaderResourceView* m_XZYXDerivativeSRV[CASCADE_COUNT] = { nullptr };
-	ID3D11Texture2D* m_XZYXDerivativePingPongTexture[CASCADE_COUNT] = { nullptr };
-	ID3D11UnorderedAccessView* m_XZYXDerivativePingPongUAV[CASCADE_COUNT] = { nullptr };
+	Texture2D* m_XZYXDerivativeTexture = nullptr;
+	Texture2D* m_XZYXDerivativePingPongTexture = nullptr;
 
-	ID3D11Texture2D* m_YZZZDerivativeTexture[CASCADE_COUNT] = { nullptr };
-	ID3D11UnorderedAccessView* m_YZZZDerivativeUAV[CASCADE_COUNT] = { nullptr };
-	ID3D11ShaderResourceView* m_YZZZDerivativeSRV[CASCADE_COUNT] = { nullptr };
-	ID3D11Texture2D* m_YZZZDerivativePingPongTexture[CASCADE_COUNT] = { nullptr };
-	ID3D11UnorderedAccessView* m_YZZZDerivativePingPongUAV[CASCADE_COUNT] = { nullptr };
+	Texture2D* m_YZZZDerivativeTexture = nullptr;
+	Texture2D* m_YZZZDerivativePingPongTexture = nullptr;
 
 	// Displacement and slope resources
-	ID3D11Texture2D* m_DisplacementTexture[CASCADE_COUNT] = { nullptr };
-	ID3D11UnorderedAccessView* m_DisplacementUAV[CASCADE_COUNT] = { nullptr };
-	ID3D11ShaderResourceView* m_DisplacementSRV[CASCADE_COUNT] = { nullptr };
-
-	ID3D11Texture2D* m_SlopeTexture[CASCADE_COUNT] = { nullptr };
-	ID3D11UnorderedAccessView* m_SlopeUAV[CASCADE_COUNT] = { nullptr };
-	ID3D11ShaderResourceView* m_SlopeSRV[CASCADE_COUNT] = { nullptr };
+	Texture2D* m_DisplacementTexture = nullptr;
+	Texture2D* m_SlopeTexture = nullptr;
 
 	// Compute shaders pointers
     ID3D11ComputeShader* m_InitialSpectrumComputeShader = nullptr;
