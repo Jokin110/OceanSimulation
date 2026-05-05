@@ -4,7 +4,7 @@
 #include "SkyBox.h"
 #include <DirectXMath.h>
 
-const int OCEAN_SURFACE_SIDE_COUNT = 5;
+const int OCEAN_SURFACE_SIDE_COUNT = 1;
 
 class SceneManager
 {

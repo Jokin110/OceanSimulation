@@ -71,6 +71,7 @@ struct OceanSimulationCascadeSettings
 {
 	UINT m_OceanTextureSize = 256; // Example grid size for the ocean surface
 	int m_SelectedTextureSizeIndex = 2;
+	float m_OceanMeshPatchSize = 2000.0f; // Size of the ocean patch in world units
 	float m_OceanPatchSize[CASCADE_COUNT] = { 2003.0f, 509.0f, 101.0f, 23.0f }; // Size of the ocean patch in world units
 	float m_MeshVertexSeparation = 10.0f;
 	float m_FrequencyFilterMultiplier = 0.5f;
@@ -102,6 +103,7 @@ public:
     void Update();
 
 	int GetOceanTextureSize() const { return m_OceanSimulationCascadeSettings.m_OceanTextureSize; }
+	float GetOceanMeshPatchSize() const { return m_OceanSimulationCascadeSettings.m_OceanMeshPatchSize; }
 	const float* GetOceanPatchSize() const { return m_OceanSimulationCascadeSettings.m_OceanPatchSize; } 
 	float GetMeshVertexSeparation() const { return m_OceanSimulationCascadeSettings.m_MeshVertexSeparation; }
 

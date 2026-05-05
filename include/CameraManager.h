@@ -9,6 +9,8 @@ struct CameraSettings
     XMFLOAT3 m_Position;
     XMFLOAT3 m_FocusPoint;
     float m_Speed;
+    float m_NearClipPlaneDistance = 0.1f;
+	float m_FarClipPlaneDistance = 1000.0f;
 };
 
 class CameraManager
@@ -41,6 +43,8 @@ public:
 
 private:
     static CameraManager* m_Instance;
+
+    void UpdateUI();
 
     CameraSettings m_CameraSettings;
 

@@ -399,6 +399,8 @@ void OceanComputeManager::UpdateCascadeSettingsUI()
     ImGui::Combo("Texture Size", &m_TemporaryOceanSimulationCascadeSettings.m_SelectedTextureSizeIndex, m_TextureDropdownNames, IM_ARRAYSIZE(m_TextureDropdownNames));
     m_TemporaryOceanSimulationCascadeSettings.m_OceanTextureSize = m_TextureSizes[m_TemporaryOceanSimulationCascadeSettings.m_SelectedTextureSizeIndex];
 
+	ImGui::DragFloat("Mesh Patch Size", &m_TemporaryOceanSimulationCascadeSettings.m_OceanMeshPatchSize, 1.0f, 1.0f, 10000.0f, "%.1f");
+
     ImGui::PopItemWidth();
 
     ImGui::Spacing();
@@ -544,6 +546,7 @@ void OceanComputeManager::ApplyCascadeSettings(bool apply)
 {
     if (apply)
     {
+        m_OceanSimulationCascadeSettings.m_OceanMeshPatchSize = m_TemporaryOceanSimulationCascadeSettings.m_OceanMeshPatchSize;
         m_OceanSimulationCascadeSettings.m_OceanTextureSize = m_TemporaryOceanSimulationCascadeSettings.m_OceanTextureSize;
         m_OceanSimulationCascadeSettings.m_SelectedTextureSizeIndex = m_TemporaryOceanSimulationCascadeSettings.m_SelectedTextureSizeIndex;
         m_OceanSimulationCascadeSettings.m_MeshVertexSeparation = m_TemporaryOceanSimulationCascadeSettings.m_MeshVertexSeparation;
@@ -557,6 +560,7 @@ void OceanComputeManager::ApplyCascadeSettings(bool apply)
     }
     else
     {
+        m_TemporaryOceanSimulationCascadeSettings.m_OceanMeshPatchSize = m_OceanSimulationCascadeSettings.m_OceanMeshPatchSize;
         m_TemporaryOceanSimulationCascadeSettings.m_OceanTextureSize = m_OceanSimulationCascadeSettings.m_OceanTextureSize;
         m_TemporaryOceanSimulationCascadeSettings.m_SelectedTextureSizeIndex = m_OceanSimulationCascadeSettings.m_SelectedTextureSizeIndex;
         m_TemporaryOceanSimulationCascadeSettings.m_MeshVertexSeparation = m_OceanSimulationCascadeSettings.m_MeshVertexSeparation;

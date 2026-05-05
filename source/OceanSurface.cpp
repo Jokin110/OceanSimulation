@@ -4,6 +4,8 @@
 #include "imgui.h"
 #include <fstream>
 
+#define MAX_OCEAN_PATCH_SIDE_VERTICES 512
+
 OceanSurface::~OceanSurface()
 {
 	
@@ -101,11 +103,11 @@ void OceanSurface::GenerateMesh()
 	m_Indices.clear();
 
 	int textureSize = OceanComputeManager::GetInstance().GetOceanTextureSize();
-	float patchSize = OceanComputeManager::GetInstance().GetOceanPatchSize()[0];
+	float patchSize = OceanComputeManager::GetInstance().GetOceanMeshPatchSize();
 
 	float vertexSeparation = max(OceanComputeManager::GetInstance().GetMeshVertexSeparation(), 0.1f);
 
-	int numVertices = max(min(patchSize / vertexSeparation + 1, 250), 2);
+	int numVertices = max(min(patchSize / vertexSeparation + 1, MAX_OCEAN_PATCH_SIDE_VERTICES), 2);
 
 	vertexSeparation = patchSize / (numVertices - 1);
 

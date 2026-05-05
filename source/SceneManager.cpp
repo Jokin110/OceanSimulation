@@ -69,7 +69,7 @@ bool SceneManager::Initialize()
 
 void SceneManager::Start()
 {
-	for (int i = 0; i < 25; i++)
+	for (int i = 0; i < OCEAN_SURFACE_SIDE_COUNT * OCEAN_SURFACE_SIDE_COUNT; i++)
 	{
 		m_Ocean[i]->UpdatePixelShaderBuffer(m_PixelShaderSettings);
 	}
@@ -97,7 +97,7 @@ void SceneManager::Update()
 
 	if (ImGui::Button("Apply Changes"))
 	{
-		for (int i = 0; i < 25; i++)
+		for (int i = 0; i < OCEAN_SURFACE_SIDE_COUNT * OCEAN_SURFACE_SIDE_COUNT; i++)
 		{
 			m_Ocean[i]->UpdatePixelShaderBuffer(m_PixelShaderSettings);
 		}
@@ -125,7 +125,7 @@ void SceneManager::Update()
 			inFile.read(reinterpret_cast<char*>(&m_PixelShaderSettings), sizeof(m_PixelShaderSettings));
 			inFile.close();
 
-			for (int i = 0; i < 25; i++)
+			for (int i = 0; i < OCEAN_SURFACE_SIDE_COUNT * OCEAN_SURFACE_SIDE_COUNT; i++)
 			{
 				m_Ocean[i]->UpdatePixelShaderBuffer(m_PixelShaderSettings);
 			}
