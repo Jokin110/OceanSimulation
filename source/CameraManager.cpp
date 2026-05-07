@@ -121,6 +121,9 @@ void CameraManager::UpdateUI()
     ImGui::SliderFloat("Near Clip Plane", &m_CameraSettings.m_NearClipPlaneDistance, MIN_NEAR_CLIP_PLANE_DISTANCE, m_CameraSettings.m_FarClipPlaneDistance);
     ImGui::SliderFloat("Far Clip Plane", &m_CameraSettings.m_FarClipPlaneDistance, m_CameraSettings.m_NearClipPlaneDistance, MAX_FAR_CLIP_PLANE_DISTANCE);
 
+    m_CameraSettings.m_NearClipPlaneDistance = min(max(m_CameraSettings.m_NearClipPlaneDistance, MIN_NEAR_CLIP_PLANE_DISTANCE), MAX_FAR_CLIP_PLANE_DISTANCE - MIN_NEAR_CLIP_PLANE_DISTANCE);
+    m_CameraSettings.m_FarClipPlaneDistance = min(max(m_CameraSettings.m_FarClipPlaneDistance, m_CameraSettings.m_NearClipPlaneDistance + MIN_NEAR_CLIP_PLANE_DISTANCE), MAX_FAR_CLIP_PLANE_DISTANCE);
+
     if (ImGui::Button("Save Settings"))
     {
         m_CameraSettings.m_Position = m_CameraPosition;
@@ -147,7 +150,8 @@ void CameraManager::UpdateUI()
 
             m_CameraPosition = m_CameraSettings.m_Position;
             m_CameraFocusPoint = m_CameraSettings.m_FocusPoint;
-            m_Speed = m_CameraSettings.m_Speed; m_CameraSettings.m_NearClipPlaneDistance = max(m_CameraSettings.m_NearClipPlaneDistance, MIN_NEAR_CLIP_PLANE_DISTANCE);
+            m_Speed = m_CameraSettings.m_Speed;
+			m_CameraSettings.m_NearClipPlaneDistance = min(max(m_CameraSettings.m_NearClipPlaneDistance, MIN_NEAR_CLIP_PLANE_DISTANCE), MAX_FAR_CLIP_PLANE_DISTANCE - MIN_NEAR_CLIP_PLANE_DISTANCE);
             m_CameraSettings.m_FarClipPlaneDistance = min(max(m_CameraSettings.m_FarClipPlaneDistance, m_CameraSettings.m_NearClipPlaneDistance + MIN_NEAR_CLIP_PLANE_DISTANCE), MAX_FAR_CLIP_PLANE_DISTANCE);
         }
     }

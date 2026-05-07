@@ -51,6 +51,10 @@ public:
 
 	int* GetRasterizerIndex() { return &m_RasterizerIndex; }
 
+	ID3D11RenderTargetView* GetRenderTargetView() const { return m_d3dRenderTargetView; }
+	ID3D11ShaderResourceView* GetSceneColorSRV() const { return m_d3dSceneColorSRV; }
+	ID3D11ShaderResourceView* GetDepthStencilSRV() const { return m_d3dDepthStencilSRV; }
+
 protected:
 	bool Initialize() override;
     bool Load() override;
@@ -83,9 +87,16 @@ private:
 	IDXGISwapChain1* m_d3dSwapChain = nullptr;
 
 	ID3D11RenderTargetView* m_d3dRenderTargetView = nullptr;
+
+	ID3D11Texture2D* m_d3dSceneColorBuffer = nullptr;
+	ID3D11RenderTargetView* m_d3dSceneColorRTV = nullptr;
+	ID3D11ShaderResourceView* m_d3dSceneColorSRV = nullptr;
+
 	ID3D11DepthStencilView* m_d3dDepthStencilView = nullptr;
 	ID3D11Texture2D* m_d3dDepthStencilBuffer = nullptr;
+	ID3D11ShaderResourceView* m_d3dDepthStencilSRV = nullptr;
 	ID3D11DepthStencilState* m_d3dDepthStencilState = nullptr;
+	ID3D11BlendState* m_d3dBlendState = nullptr;
 	
 	ID3D11RasterizerState* m_d3dRasterizerState[2] = { nullptr };
 

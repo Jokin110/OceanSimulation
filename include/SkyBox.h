@@ -12,15 +12,12 @@ const int SKYBOX_TEXTURE_COUNT = 6;
 struct VertexDataSkyBox
 {
 	XMFLOAT3 m_Position;
-	XMFLOAT2 m_UV;
-	UINT m_TextureIndex;
 };
 
 // Define the structure of the constant buffers for the vertex shader
 struct PerObjectVertexShaderConstantBufferDataSkyBox
 {
-	XMMATRIX m_WorldMatrix;
-	XMMATRIX m_ViewProjectionMatrix;
+	XMMATRIX m_WorldViewProjectionMatrix;
 };
 
 // Define the structure of the constant buffers for the hull shader
@@ -59,8 +56,8 @@ protected:
 	void GenerateMesh() override;
 
 private:
-	wstring m_VertexShaderFilePath = L"assets/shaders/SkyBoxVS.hlsl";
-	wstring m_PixelShaderFilePath = L"assets/shaders/SkyBoxPS.hlsl";
+	wstring m_VertexShaderFilePath = L"assets/shaders/renderPipeline/SkyBoxVS.hlsl";
+	wstring m_PixelShaderFilePath = L"assets/shaders/renderPipeline/SkyBoxPS.hlsl";
 
 	string m_SkyBoxTextureFilePath[SKYBOX_TEXTURE_COUNT] = {"images/Daylight Box_Back.bmp", "images/Daylight Box_Front.bmp", "images/Daylight Box_Left.bmp", "images/Daylight Box_Right.bmp", "images/Daylight Box_Top.bmp", "images/Daylight Box_Bottom.bmp"};
 

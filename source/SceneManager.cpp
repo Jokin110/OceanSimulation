@@ -6,14 +6,18 @@ SceneManager* SceneManager::m_Instance = nullptr;
 
 SceneManager::SceneManager()
 {
+	m_PixelShaderSettings = {};
+
 	for (int i = 0; i < OCEAN_SURFACE_SIDE_COUNT * OCEAN_SURFACE_SIDE_COUNT; i++)
 	{
-		m_Ocean[i] = new OceanSurface("Ocean Surface", L"assets/shaders/OceanSurfaceVS.hlsl", L"assets/shaders/PixelShader.hlsl", L"assets/shaders/OceanSurfaceHS.hlsl", L"assets/shaders/OceanSurfaceDS.hlsl", D3D11_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
+		m_Ocean[i] = new OceanSurface("Ocean Surface", L"assets/shaders/renderPipeline/OceanSurfaceVS.hlsl", L"assets/shaders/renderPipeline/PixelShader.hlsl", L"assets/shaders/renderPipeline/OceanSurfaceHS.hlsl", L"assets/shaders/renderPipeline/OceanSurfaceDS.hlsl", D3D11_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
 
 		m_Ocean[i]->SetPosition(Vector3((i % OCEAN_SURFACE_SIDE_COUNT - (OCEAN_SURFACE_SIDE_COUNT - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f), 0.0f, (i / OCEAN_SURFACE_SIDE_COUNT - (OCEAN_SURFACE_SIDE_COUNT - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f)));
 	}
 
 	m_SkyBox = new SkyBox("SkyBox");
+
+	m_FogPostProcessEffect = new FogPostprocessEffect("Fog Effect", L"assets/shaders/postprocessEffects/Fog.hlsl");
 }
 
 SceneManager::~SceneManager()
@@ -24,6 +28,7 @@ SceneManager::~SceneManager()
 	}
 
 	m_SkyBox = nullptr;
+	m_FogPostProcessEffect = nullptr;
 
 	if (m_Instance)
 	{
@@ -46,8 +51,6 @@ bool SceneManager::Initialize()
 		m_Instance->m_PixelShaderSettings.m_AmbientLightIntensity = 0.25f;
 		m_Instance->m_PixelShaderSettings.m_LightDirection = XMFLOAT3(0.0f, -0.5f, -1.0f);
 		m_Instance->m_PixelShaderSettings.m_SpecularColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
-		m_Instance->m_PixelShaderSettings.m_FogColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
-		m_Instance->m_PixelShaderSettings.m_FogDistance = 800.0f;
 
 		m_Instance->m_PixelShaderSettings.m_UpwellingColor = XMFLOAT3(0.1f, 0.3f, 0.4f);
 		m_Instance->m_PixelShaderSettings.m_Snell = 1.33f;
@@ -88,8 +91,6 @@ void SceneManager::Update()
 	ImGui::SliderFloat("Ambient Light Intensity", &m_PixelShaderSettings.m_AmbientLightIntensity, 0.0f, 1.0f);
 	ImGui::SliderFloat3("Light Direction", (float*)&m_PixelShaderSettings.m_LightDirection, -1.0f, 1.0f);
 	ImGui::ColorEdit3("Specular Color", (float*)&m_PixelShaderSettings.m_SpecularColor);
-	ImGui::ColorEdit3("Fog Color", (float*)&m_PixelShaderSettings.m_FogColor);
-	ImGui::SliderFloat("Fog Distance", &m_PixelShaderSettings.m_FogDistance, 0.0f, 2000.0f);
 	ImGui::ColorEdit3("Upwelling Color", (float*)&m_PixelShaderSettings.m_UpwellingColor);
 	ImGui::SliderFloat("Snell's Index", &m_PixelShaderSettings.m_Snell, 1.0f, 2.0f);
 	ImGui::ColorEdit3("Air Color", (float*)&m_PixelShaderSettings.m_AirColor);

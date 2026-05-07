@@ -1,8 +1,9 @@
 #pragma once
 
+#include <DirectXMath.h>
 #include "OceanSurface.h"
 #include "SkyBox.h"
-#include <DirectXMath.h>
+#include "FogPostprocessEffect.h"
 
 const int OCEAN_SURFACE_SIDE_COUNT = 1;
 
@@ -36,6 +37,9 @@ public:
 	float GetDecayFactor() const { return m_PixelShaderSettings.m_DecayFactor; }
     float GetFoamAddition() const { return m_PixelShaderSettings.m_FoamAddition; }
 
+	XMFLOAT3 GetLightDirection() const { return m_PixelShaderSettings.m_LightDirection; }
+	XMFLOAT3 GetLightColor() const { return m_PixelShaderSettings.m_LightColor; }
+
 private:
     static SceneManager* m_Instance;
 
@@ -43,5 +47,7 @@ private:
 
     OceanSurface* m_Ocean[OCEAN_SURFACE_SIDE_COUNT * OCEAN_SURFACE_SIDE_COUNT] = { nullptr };
     SkyBox* m_SkyBox = nullptr;
+
+    FogPostprocessEffect* m_FogPostProcessEffect = nullptr;
 };
 

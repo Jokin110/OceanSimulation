@@ -163,9 +163,9 @@ private:
 	TessellationSettingsData m_TessellationSettingsData;
 
 	// Compute shader file paths
-	wstring m_InitialSpectrumComputeShaderFile = L"assets/shaders/InitialSpectrumCS.hlsl";
-	wstring m_TimeEvolutionComputeShaderFile = L"assets/shaders/TimeEvolutionCS.hlsl";
-	wstring m_DisplacementAndSlopeComputeShaderFile = L"assets/shaders/DisplacementAndSlopeCS.hlsl";
+	wstring m_InitialSpectrumComputeShaderFile = L"assets/shaders/compute/InitialSpectrumCS.hlsl";
+	wstring m_TimeEvolutionComputeShaderFile = L"assets/shaders/compute/TimeEvolutionCS.hlsl";
+	wstring m_DisplacementAndSlopeComputeShaderFile = L"assets/shaders/compute/DisplacementAndSlopeCS.hlsl";
 
 	// Initial spectrum resources
 	Texture2D* m_InitialSpectrumTexture = nullptr;

@@ -57,8 +57,6 @@ struct PixelShaderConstantBufferData
 	float m_DecayFactor;
 	XMFLOAT3 m_SpecularColor;
 	float m_FoamAddition;
-	XMFLOAT3 m_FogColor;
-	float m_FogDistance;
 
 	XMFLOAT3 m_UpwellingColor;
 	float m_Snell;

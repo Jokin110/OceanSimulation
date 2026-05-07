@@ -41,6 +41,9 @@ public:
     XMMATRIX GetProjectionMatrix() { return m_ProjectionMatrix; }
     XMFLOAT3 GetCameraPosition() { return m_CameraPosition; }
 
+	float GetNearPlaneDistance() const { return m_CameraSettings.m_NearClipPlaneDistance; }
+	float GetFarPlaneDistance() const { return m_CameraSettings.m_FarClipPlaneDistance; }
+
 private:
     static CameraManager* m_Instance;
 

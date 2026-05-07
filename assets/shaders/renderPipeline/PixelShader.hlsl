@@ -109,7 +109,7 @@ PSOutput Main(PSInput input)
     
     finalColor = lerp(finalColor, m_FoamColor, foam); //clamp((m_FoamBias - slopeSample.a) / m_FoamBias, 0, 1));
     
-    finalColor += m_FogColor * saturate(length(input.WorldPosition - input.EyePos) / m_FogDistance);
+    //finalColor += m_FogColor * saturate(length(input.WorldPosition - input.EyePos) / m_FogDistance);
     
     output.Color = float4(finalColor, 1.0);
    

@@ -16,6 +16,15 @@
     <Filter Include="Source Files\ImGui">
       <UniqueIdentifier>{1b9bf171-969b-4e34-8ef5-301ddb5539e3}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Resource Files\compute">
+      <UniqueIdentifier>{768c1eef-2985-4e94-ad69-a7cda18ec33a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\postprocess">
+      <UniqueIdentifier>{5642a424-d3f4-4a1c-837e-2d08169fdc10}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Resource Files\renderPipeline">
+      <UniqueIdentifier>{2a0e4fb8-54ef-4a0f-96e4-ee5f662be99a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\WindowApplication.h">
@@ -58,6 +67,18 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="include\Texture2D.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PostprocessEffect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\PostprocessEffectManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\DefaultPostprocessEffect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\FogPostprocessEffect.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -120,43 +141,61 @@
     <ClCompile Include="source\Texture2D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="source\PostprocessEffectManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\DefaultPostprocessEffect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="source\FogPostprocessEffect.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="assets\shaders\PixelShader.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="assets\shaders\compute\DisplacementAndSlopeCS.hlsl">
+      <Filter>Resource Files\compute</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\SumOfSinesVS.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="assets\shaders\compute\FFTCS.hlsl">
+      <Filter>Resource Files\compute</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\GerstnerWavesVS.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="assets\shaders\compute\InitialSpectrumCS.hlsl">
+      <Filter>Resource Files\compute</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\OceanSurfaceDS.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="assets\shaders\compute\TimeEvolutionCS.hlsl">
+      <Filter>Resource Files\compute</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\OceanSurfaceHS.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="assets\shaders\renderPipeline\GerstnerWavesVS.hlsl">
+      <Filter>Resource Files\renderPipeline</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\OceanSurfaceVS.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="assets\shaders\renderPipeline\OceanSurfaceDS.hlsl">
+      <Filter>Resource Files\renderPipeline</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\FFTCS.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="assets\shaders\renderPipeline\OceanSurfaceHS.hlsl">
+      <Filter>Resource Files\renderPipeline</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\InitialSpectrumCS.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="assets\shaders\renderPipeline\OceanSurfaceVS.hlsl">
+      <Filter>Resource Files\renderPipeline</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\TimeEvolutionCS.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="assets\shaders\renderPipeline\PixelShader.hlsl">
+      <Filter>Resource Files\renderPipeline</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\DisplacementAndSlopeCS.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="assets\shaders\renderPipeline\SkyBoxPS.hlsl">
+      <Filter>Resource Files\renderPipeline</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\SkyBoxVS.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="assets\shaders\renderPipeline\SkyBoxVS.hlsl">
+      <Filter>Resource Files\renderPipeline</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\SkyBoxPS.hlsl">
-      <Filter>Resource Files</Filter>
+    <FxCompile Include="assets\shaders\renderPipeline\SumOfSinesVS.hlsl">
+      <Filter>Resource Files\renderPipeline</Filter>
+    </FxCompile>
+    <FxCompile Include="assets\shaders\postprocessEffects\Fog.hlsl">
+      <Filter>Resource Files\postprocess</Filter>
+    </FxCompile>
+    <FxCompile Include="assets\shaders\postprocessEffects\PostprocessEffectVS.hlsl">
+      <Filter>Resource Files\postprocess</Filter>
+    </FxCompile>
+    <FxCompile Include="assets\shaders\postprocessEffects\DefaultPostprocessEffect.hlsl">
+      <Filter>Resource Files\postprocess</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

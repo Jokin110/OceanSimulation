@@ -5,7 +5,6 @@
 #include <vector>
 
 #include "Vector3.h"
-#include "TimeManager.h"
 #include "D3D11Application.h"
 #include "ObjectManager.h"
 #include <string>
@@ -205,8 +204,8 @@ Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBufferData
 	m_Rotation = Vector3(0.0f, 0.0f, 0.0f);
 	m_Scale = Vector3(1.0f, 1.0f, 1.0f);
 
-	m_VertexShaderFile = L"assets/shaders/GerstnerWavesVS.hlsl";
-	m_PixelShaderFile = L"assets/shaders/PixelShader.hlsl";
+	m_VertexShaderFile = L"assets/shaders/renderPipeline/GerstnerWavesVS.hlsl";
+	m_PixelShaderFile = L"assets/shaders/renderPipeline/PixelShader.hlsl";
 
 	m_d3dInputLayout = nullptr;
 	m_d3dVertexBuffer = nullptr;
@@ -226,6 +225,8 @@ Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBufferData
 	m_PixelShaderConstantBufferData = {};
 	m_HullShaderConstantBufferData = {};
 	m_DomainShaderConstantBufferData = {};
+
+	m_Initialized = false;
 
 	ObjectManager::GetInstance().AddObjectToList(this);
 }
@@ -505,7 +506,17 @@ template<typename VertexData, typename VertexShaderConstantBufferData, typename 
 void Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBufferData, HullShaderConstantBufferData, DomainShaderConstantBufferData>::GetVertexShaderConstantBufferDesc(D3D11_BUFFER_DESC& constantBufferDesc)
 {
 	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	constantBufferDesc.ByteWidth = sizeof(VertexShaderConstantBufferData);
+
+	UINT rawSize = sizeof(VertexShaderConstantBufferData);
+
+	if (rawSize <= 1)
+	{
+		constantBufferDesc.ByteWidth = 0;
+		return;
+	}
+
+	constantBufferDesc.ByteWidth = (rawSize + 15) & ~15;
+
 	constantBufferDesc.CPUAccessFlags = 0;
 	constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 }
@@ -514,7 +525,17 @@ template<typename VertexData, typename VertexShaderConstantBufferData, typename 
 void Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBufferData, HullShaderConstantBufferData, DomainShaderConstantBufferData>::GetPixelShaderConstantBufferDesc(D3D11_BUFFER_DESC& constantBufferDesc)
 {
 	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	constantBufferDesc.ByteWidth = sizeof(PixelShaderConstantBufferData);
+
+	UINT rawSize = sizeof(PixelShaderConstantBufferData);
+
+	if (rawSize <= 1)
+	{
+		constantBufferDesc.ByteWidth = 0;
+		return;
+	}
+
+	constantBufferDesc.ByteWidth = (rawSize + 15) & ~15;
+
 	constantBufferDesc.CPUAccessFlags = 0;
 	constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 }
@@ -523,7 +544,17 @@ template<typename VertexData, typename VertexShaderConstantBufferData, typename 
 void Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBufferData, HullShaderConstantBufferData, DomainShaderConstantBufferData>::GetHullShaderConstantBufferDesc(D3D11_BUFFER_DESC& constantBufferDesc)
 {
 	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	constantBufferDesc.ByteWidth = sizeof(HullShaderConstantBufferData);
+
+	UINT rawSize = sizeof(HullShaderConstantBufferData);
+
+	if (rawSize <= 1)
+	{
+		constantBufferDesc.ByteWidth = 0;
+		return;
+	}
+
+	constantBufferDesc.ByteWidth = (rawSize + 15) & ~15;
+
 	constantBufferDesc.CPUAccessFlags = 0;
 	constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 }
@@ -532,7 +563,18 @@ template<typename VertexData, typename VertexShaderConstantBufferData, typename 
 void Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBufferData, HullShaderConstantBufferData, DomainShaderConstantBufferData>::GetDomainShaderConstantBufferDesc(D3D11_BUFFER_DESC& constantBufferDesc)
 {
 	constantBufferDesc.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-	constantBufferDesc.ByteWidth = sizeof(DomainShaderConstantBufferData);
+
+	UINT rawSize = sizeof(DomainShaderConstantBufferData);
+
+	if (rawSize <= 1)
+	{
+		constantBufferDesc.ByteWidth = 0;
+		return;
+	}
+
+	constantBufferDesc.ByteWidth = (rawSize + 15) & ~15;
+
+
 	constantBufferDesc.CPUAccessFlags = 0;
 	constantBufferDesc.Usage = D3D11_USAGE_DEFAULT;
 }

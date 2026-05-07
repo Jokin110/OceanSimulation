@@ -8,6 +8,7 @@
 
 #include "TimeManager.h"
 #include "ObjectManager.h"
+#include "PostprocessEffectManager.h"
 #include "SceneManager.h"
 #include "CameraManager.h"
 #include "InputManager.h"
@@ -28,6 +29,7 @@ D3D11Application::~D3D11Application()
     CleanupImGui();
 
     ObjectManager::DestroyInstance();
+	PostprocessEffectManager::DestroyInstance();
     SceneManager::DestroyInstance();
     CameraManager::DestroyInstance();
     OceanComputeManager::DestroyInstance();
@@ -38,6 +40,7 @@ D3D11Application::~D3D11Application()
 	// Ensure all pointers are released
     if (m_d3dDeviceContext) m_d3dDeviceContext->ClearState();
     m_d3dDeviceContext->Flush();
+	SafeRelease(m_d3dBlendState);
     SafeRelease(m_d3dRasterizerState[0]);
     SafeRelease(m_d3dRasterizerState[1]);
     DestroySwapchainResources();
@@ -179,6 +182,31 @@ bool D3D11Application::Initialize()
         return false;
     }
 
+    D3D11_BLEND_DESC blendDesc = {};
+    blendDesc.AlphaToCoverageEnable = FALSE;
+    blendDesc.IndependentBlendEnable = FALSE;
+
+    // Configure the first Render Target (your main screen)
+    blendDesc.RenderTarget[0].BlendEnable = TRUE;
+
+    // RGB Blending Math
+    blendDesc.RenderTarget[0].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+    blendDesc.RenderTarget[0].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+    blendDesc.RenderTarget[0].BlendOp = D3D11_BLEND_OP_ADD;
+
+    // Alpha Channel Blending Math
+    blendDesc.RenderTarget[0].SrcBlendAlpha = D3D11_BLEND_ONE;
+    blendDesc.RenderTarget[0].DestBlendAlpha = D3D11_BLEND_ZERO;
+    blendDesc.RenderTarget[0].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+
+    blendDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+    if (FAILED(m_d3dDevice->CreateBlendState(&blendDesc, &m_d3dBlendState)))
+    {
+        cout << "D3D11: Failed to create Blend State\n";
+        return false;
+    }
+
     m_d3dViewport.TopLeftX = 0;
     m_d3dViewport.TopLeftY = 0;
     m_d3dViewport.Width = static_cast<float>(GetWindowWidth());
@@ -233,6 +261,11 @@ bool D3D11Application::InitializeManagers()
         return false;
     }
 
+    if (!PostprocessEffectManager::Initialize())
+    {
+        return false;
+	}
+
     if (!SceneManager::Initialize())
     {
         return false;
@@ -242,6 +275,11 @@ bool D3D11Application::InitializeManagers()
     {
         return false;
     }
+
+    if (!PostprocessEffectManager::GetInstance().InitializeEffects())
+    {
+        return false;
+	}
 
     return true;
 }
@@ -288,6 +326,43 @@ bool D3D11Application::CreateSwapchainResources()
 
 	SafeRelease(backBuffer);
 
+    D3D11_TEXTURE2D_DESC texDesc = {};
+    texDesc.Width = GetWindowWidth();
+    texDesc.Height = GetWindowHeight();
+    texDesc.MipLevels = 1;
+    texDesc.ArraySize = 1;
+    texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    texDesc.SampleDesc.Count = 1;
+    texDesc.Usage = D3D11_USAGE_DEFAULT;
+    texDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Format = texDesc.Format;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = 1;
+
+    D3D11_RENDER_TARGET_VIEW_DESC rtvDesc = {};
+    rtvDesc.Format = texDesc.Format;
+    rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
+
+    if (FAILED(m_d3dDevice->CreateTexture2D(&texDesc, nullptr, &m_d3dSceneColorBuffer)))
+    {
+        cout << "D3D11: Failed to create render target texture." << endl;
+        return false;
+	}
+
+    if (FAILED(m_d3dDevice->CreateRenderTargetView(m_d3dSceneColorBuffer, &rtvDesc, &m_d3dSceneColorRTV)))
+    {
+        cout << "D3D11: Failed to create render target view for the scene color texture." << endl;
+        return false;
+	}
+
+    if (FAILED(m_d3dDevice->CreateShaderResourceView(m_d3dSceneColorBuffer, &srvDesc, &m_d3dSceneColorSRV)))
+    {
+        cout << "D3D11: Failed to create shader resource view for the scene color texture." << endl;
+        return false;
+    }
+
     return true;
 }
 
@@ -296,9 +371,9 @@ bool D3D11Application::CreateDepthStencilResources()
 	D3D11_TEXTURE2D_DESC depthStencilBufferDesc = {};
 
 	depthStencilBufferDesc.ArraySize = 1;
-    depthStencilBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
+    depthStencilBufferDesc.BindFlags = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
     depthStencilBufferDesc.CPUAccessFlags = 0;
-	depthStencilBufferDesc.Format = DXGI_FORMAT::DXGI_FORMAT_D24_UNORM_S8_UINT;
+	depthStencilBufferDesc.Format = DXGI_FORMAT::DXGI_FORMAT_R24G8_TYPELESS;
 	depthStencilBufferDesc.Width = GetWindowWidth();
 	depthStencilBufferDesc.Height = GetWindowHeight();
 	depthStencilBufferDesc.MipLevels = 1;
@@ -315,12 +390,31 @@ bool D3D11Application::CreateDepthStencilResources()
         return false;
 	}
 
+    D3D11_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+    dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    dsvDesc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+    dsvDesc.Texture2D.MipSlice = 0;
+
     if (FAILED(m_d3dDevice->CreateDepthStencilView(
         m_d3dDepthStencilBuffer,
-        nullptr,
+        &dsvDesc,
         &m_d3dDepthStencilView)))
     {
         cout << "D3D11: Failed to create depth stencil view." << endl;
+        return false;
+    }
+
+    D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
+    srvDesc.Format = DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+    srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+    srvDesc.Texture2D.MipLevels = 1;
+
+    if (FAILED(m_d3dDevice->CreateShaderResourceView(
+        m_d3dDepthStencilBuffer, 
+        &srvDesc, 
+        &m_d3dDepthStencilSRV)))
+    {
+        cout << "Failed to create depth stencil SRV! \n";
         return false;
     }
 
@@ -352,12 +446,17 @@ bool D3D11Application::Load()
 
     ObjectManager::GetInstance().Start();
 
+	PostprocessEffectManager::GetInstance().Start();
+
     return true;
 }
 
 void D3D11Application::DestroySwapchainResources()
 {
     SafeRelease(m_d3dRenderTargetView);
+	SafeRelease(m_d3dSceneColorBuffer);
+    SafeRelease(m_d3dSceneColorRTV);
+	SafeRelease(m_d3dSceneColorSRV);
 }
 
 void D3D11Application::DestroyDepthStencilResources()
@@ -370,6 +469,7 @@ void D3D11Application::DestroyDepthStencilResources()
 void D3D11Application::ClearScreen(const float clearColor[4], float clearDepth, UINT8 clearStencil)
 {
     m_d3dDeviceContext->ClearRenderTargetView(m_d3dRenderTargetView, clearColor);
+    m_d3dDeviceContext->ClearRenderTargetView(m_d3dSceneColorRTV, clearColor);
     m_d3dDeviceContext->ClearDepthStencilView(
         m_d3dDepthStencilView,
         D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL,
@@ -401,7 +501,7 @@ void D3D11Application::OnResize(const int32_t width, const int32_t height)
         0,
         width,
         height,
-        DXGI_FORMAT::DXGI_FORMAT_B8G8R8A8_UNORM,
+        DXGI_FORMAT::DXGI_FORMAT_R8G8B8A8_UNORM,
         0)))
     {
         cout << "D3D11: Failed to recreate swapchain buffers." << endl;
@@ -410,6 +510,8 @@ void D3D11Application::OnResize(const int32_t width, const int32_t height)
 
     CreateSwapchainResources();
     CreateDepthStencilResources();
+
+    PostprocessEffectManager::GetInstance().OnResize();
 
     m_d3dViewport.Width = static_cast<float>(width);
     m_d3dViewport.Height = static_cast<float>(height);
@@ -433,6 +535,7 @@ void D3D11Application::UpdateManagers()
 	SceneManager::GetInstance().Update();
     CameraManager::GetInstance().Update();
 	ObjectManager::GetInstance().Update();
+	PostprocessEffectManager::GetInstance().Update();
 }
 
 void D3D11Application::Render()
@@ -445,13 +548,25 @@ void D3D11Application::Render()
     m_d3dDeviceContext->RSSetState(m_d3dRasterizerState[m_RasterizerIndex]);
     m_d3dDeviceContext->RSSetViewports(1, &m_d3dViewport);
 
-    m_d3dDeviceContext->OMSetRenderTargets(1, &m_d3dRenderTargetView, m_d3dDepthStencilView);
+	// If wireframe is selected, do not apply postprocessing effects and render directly to the back buffer
+    if (m_RasterizerIndex == 1)
+    {
+        m_d3dDeviceContext->OMSetRenderTargets(1, &m_d3dRenderTargetView, m_d3dDepthStencilView);
+    }
+    else
+    {
+        m_d3dDeviceContext->OMSetRenderTargets(1, &m_d3dSceneColorRTV, m_d3dDepthStencilView);
+    }
+
     m_d3dDeviceContext->OMSetDepthStencilState(m_d3dDepthStencilState, 1);
+
+    const UINT sampleMask = 0xffffffff;
+    m_d3dDeviceContext->OMSetBlendState(nullptr, nullptr, sampleMask);
 
     // D3D11 rendering for each object
     for (int i = 0; i < ObjectManager::GetInstance().GetObjectList().size(); i++)
     {
-        auto object = ObjectManager::GetInstance().GetObjectList()[i];
+        IObject* object = ObjectManager::GetInstance().GetObjectList()[i];
 
         if (!object->IsInitialized())
         {
@@ -527,6 +642,18 @@ void D3D11Application::Render()
         UINT psCount = object->GetPixelShaderSRVCount();
         if (psCount > 0) m_d3dDeviceContext->PSSetShaderResources(0, psCount, nullSRVs);
     }
+
+    // Post-processing
+    if (m_RasterizerIndex != 1)
+    {
+        const float blendFactor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+        m_d3dDeviceContext->OMSetBlendState(m_d3dBlendState, blendFactor, sampleMask);
+
+        PostprocessEffectManager::GetInstance().Render();
+    }
+
+    m_d3dDeviceContext->OMSetRenderTargets(1, &m_d3dRenderTargetView, nullptr);
 
     ImGui::Render();
     ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());

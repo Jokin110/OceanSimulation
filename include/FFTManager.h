@@ -59,7 +59,7 @@ private:
     // Precomputed Twiddle Factors and Indices
     Texture2D* m_PrecomputedDataTexture = nullptr;
 
-    wstring m_FFTComputeShaderFile = L"assets/shaders/FFTCS.hlsl";
+    wstring m_FFTComputeShaderFile = L"assets/shaders/compute/FFTCS.hlsl";
 
     // Individual Compute Shader Kernels
     ID3D11ComputeShader* m_PrecomputeCS = nullptr;
