@@ -4,13 +4,19 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-Texture2D::Texture2D(int textureCount, string* path, bool useSRV, bool useUAV)
+#include "DDSTextureLoader.h"
+
+using namespace DirectX;
+
+Texture2D::Texture2D(int textureCount, string* path, bool useMipLevels, bool isCubemap, bool useSRV, bool useUAV)
 {
 	m_TextureCount = textureCount;
 
 	m_TexturePath = path;
+	m_UseMipLevels = useMipLevels;
+	m_IsCubemap = isCubemap;
 	m_UseSRV = useSRV;
-	m_UseUAV = useUAV;
+	m_UseUAV = useUAV && !isCubemap;
     m_LoadFromFile = true;
 
     m_TextureWidth = 0;
@@ -19,17 +25,19 @@ Texture2D::Texture2D(int textureCount, string* path, bool useSRV, bool useUAV)
     InitializeTextureArrays();
 }
 
-Texture2D::Texture2D(int textureCount, UINT width, UINT height, bool useSRV, bool useUAV)
+Texture2D::Texture2D(int textureCount, UINT width, UINT height, bool useMipLevels, bool useSRV, bool useUAV)
 {
     m_TextureCount = textureCount;
 
     m_TexturePath = { nullptr };
+    m_UseMipLevels = useMipLevels;
     m_UseSRV = useSRV;
     m_UseUAV = useUAV;
     m_LoadFromFile = false;
 
     m_TextureWidth = width;
     m_TextureHeight = height;
+    m_IsCubemap = false;
 
 	InitializeTextureArrays();
 }
@@ -48,20 +56,25 @@ bool Texture2D::Initialize()
         D3D11_TEXTURE2D_DESC texDesc = {};
         texDesc.Width = m_TextureWidth;
         texDesc.Height = m_TextureHeight;
-        texDesc.MipLevels = 1;
+        texDesc.MipLevels = m_UseMipLevels ? 0 : 1;
         texDesc.ArraySize = 1;
         texDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
         texDesc.SampleDesc.Count = 1;
         texDesc.Usage = D3D11_USAGE_DEFAULT;
         texDesc.BindFlags = 0;
 
+        if (m_UseMipLevels)
+        {
+            texDesc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+			texDesc.BindFlags |= D3D11_BIND_RENDER_TARGET; // Mip level generation requires the texture to be a render target
+        }
         if (m_UseSRV) texDesc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
         if (m_UseUAV) texDesc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
 
         D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
         srvDesc.Format = texDesc.Format;
         srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Texture2D.MipLevels = 1;
+        srvDesc.Texture2D.MipLevels = m_UseMipLevels ? -1 : 1;
 
         D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
         uavDesc.Format = texDesc.Format;
@@ -94,7 +107,7 @@ bool Texture2D::Initialize()
             }
         }
     }
-    else
+	else if (!m_IsCubemap)
     {
         int imgWidth, imgHeight, imgChannels;
 
@@ -122,14 +135,19 @@ bool Texture2D::Initialize()
             D3D11_TEXTURE2D_DESC texDesc = {};
             texDesc.Width = m_TextureWidth;
             texDesc.Height = m_TextureHeight;
-            texDesc.MipLevels = 1;
+            texDesc.MipLevels = m_UseMipLevels ? -1 : 1;
             texDesc.ArraySize = 1;
             texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
             texDesc.SampleDesc.Count = 1;
             texDesc.Usage = D3D11_USAGE_DEFAULT;
             texDesc.BindFlags = 0;
 
-			if (m_UseSRV) texDesc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
+            if (m_UseMipLevels)
+            {
+                texDesc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+                texDesc.BindFlags |= D3D11_BIND_RENDER_TARGET; // Mip level generation requires the texture to be a render target
+            }
+            if (m_UseSRV) texDesc.BindFlags |= D3D11_BIND_SHADER_RESOURCE;
             if (m_UseUAV) texDesc.BindFlags |= D3D11_BIND_UNORDERED_ACCESS;
 
             D3D11_SUBRESOURCE_DATA initData = {};
@@ -150,7 +168,7 @@ bool Texture2D::Initialize()
                 D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
                 srvDesc.Format = texDesc.Format;
                 srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
-                srvDesc.Texture2D.MipLevels = 1;
+                srvDesc.Texture2D.MipLevels = m_UseMipLevels ? -1 : 1;
 
                 if (FAILED(device->CreateShaderResourceView(m_Texture[i], &srvDesc, &m_TextureSRV[i])))
                 {
@@ -170,6 +188,29 @@ bool Texture2D::Initialize()
                     cout << "Failed to create texture UAV from file! \n";
                     return false;
                 }
+            }
+        }
+    }
+    else
+    {
+        for (int i = 0; i < m_TextureCount; i++)
+        {
+#if _DEBUG
+            string path = m_TexturePath[i];
+#else
+            string path = "../../" + m_TexturePath[i];
+#endif
+			wstring wPath(path.begin(), path.end());
+
+            if (FAILED(CreateDDSTextureFromFile(
+                D3D11Application::GetInstance().GetDevice(),
+                wPath.c_str(),
+                (ID3D11Resource**)&m_Texture[i],
+                &m_TextureSRV[i]
+            )))
+            {
+                cout << "Failed to load DDS Cubemap!" << endl;
+                return false;
             }
         }
     }

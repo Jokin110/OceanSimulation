@@ -59,6 +59,8 @@ public:
 
 	virtual bool UseTessellation() = 0;
 
+	virtual const string GetName() = 0;
+
 	virtual Vector3 GetPosition() = 0;
 	virtual void SetPosition(const Vector3& position) = 0;
 	virtual Vector3 GetRotation() = 0;
@@ -117,6 +119,8 @@ public:
 	UINT GetVertexStride() { return sizeof(VertexData); }
 
 	bool UseTessellation() { return !m_HullShaderFile.empty() && !m_DomainShaderFile.empty(); }
+
+	const string GetName() { return m_Name; }
 
 	Vector3 GetPosition() { return m_Position; }
 	void SetPosition(const Vector3& position) { m_Position = position; }
@@ -498,6 +502,7 @@ template<typename VertexData, typename VertexShaderConstantBufferData, typename 
 void Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBufferData, HullShaderConstantBufferData, DomainShaderConstantBufferData>::Update()
 {
 	if (m_d3dVertexShaderConstantBuffers != nullptr) D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(m_d3dVertexShaderConstantBuffers, 0, nullptr, &m_VertexShaderConstantBufferData, 0, 0);
+	if (m_d3dPixelShaderConstantBuffers != nullptr) D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(m_d3dPixelShaderConstantBuffers, 0, nullptr, &m_PixelShaderConstantBufferData, 0, 0);
 	if (m_d3dHullShaderConstantBuffers != nullptr) D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(m_d3dHullShaderConstantBuffers, 0, nullptr, &m_HullShaderConstantBufferData, 0, 0);
 	if (m_d3dDomainShaderConstantBuffers != nullptr) D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(m_d3dDomainShaderConstantBuffers, 0, nullptr, &m_DomainShaderConstantBufferData, 0, 0);
 }

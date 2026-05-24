@@ -8,6 +8,7 @@ Texture2D<float4> YZZZDerivativeTexture : register(t3);
 // Displacement and slope output textures
 RWTexture2D<float4> DisplacementTexture : register(u0);
 RWTexture2D<float4> SlopeTexture : register(u1);
+RWTexture2D<float4> SecondOrderMoments : register(u2);
 
 cbuffer DisplacementAndSlopeParams : register(b0)
 {
@@ -63,4 +64,6 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     
     DisplacementTexture[uv] = float4(xyDisplacement.r * m_ChoppinessFactor, xyDisplacement.b, zDisplacementXXDerivative.r * m_ChoppinessFactor, 0.0f);
     SlopeTexture[uv] = float4(slopeX, slopeZ, 0.0f, foam);
+    SecondOrderMoments[uv] = float4(slopeX * slopeX, slopeZ * slopeZ, slopeX * slopeZ, 0.0f);
+
 }

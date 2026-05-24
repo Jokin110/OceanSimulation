@@ -82,7 +82,7 @@ bool FFTManager::CreateResources()
     // 2. Create Precomputed Data Texture (Width = log2(Size), Height = Size)
     int logSize = static_cast<int>(std::log2(m_Size));
 
-	m_PrecomputedDataTexture = new Texture2D(1, logSize, m_Size, true, true);
+	m_PrecomputedDataTexture = new Texture2D(1, logSize, m_Size, false, true, true);
 	if (!m_PrecomputedDataTexture->Initialize()) return false;
 
     return true;

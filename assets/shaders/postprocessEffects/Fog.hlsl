@@ -16,6 +16,8 @@ cbuffer FogSettingsBuffer : register (b0)
     float m_FogFactorExponent;
     float3 m_LightColor;
     float m_LightScatteringIntensity;
+    float m_LightScatteringBias;
+    float3 m_Padding;
 };
 
 Texture2D SceneColorTexture : register(t0);
@@ -42,9 +44,8 @@ float4 Main(PSInput input) : SV_TARGET
 
     fogFactor = saturate(1.0f - fogFactor);
     
-    float lightScattering = saturate(dot(viewDir, m_LightDirection));
-    lightScattering = pow(lightScattering, m_LightScatteringIntensity);
-    lightScattering = 0.0f;
+    float lightScattering = pow(saturate(dot(viewDir, m_LightDirection)), m_LightScatteringIntensity);
+    lightScattering = saturate(lightScattering - m_LightScatteringBias);
     
     float3 fogColor = lerp(m_FogColor, m_LightColor, lightScattering);
 

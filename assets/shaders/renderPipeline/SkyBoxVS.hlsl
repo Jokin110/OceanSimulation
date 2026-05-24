@@ -21,7 +21,7 @@ VSOutput Main(VSInput input)
     
     output.m_LocalPosition = input.m_Position;
     output.m_Position = mul(float4(input.m_Position, 1.0), m_WorldViewProjectionMatrix);
-    output.m_Position.z = output.m_Position.w - 0.0001f; // Push the skybox slightly back to prevent z-fighting with the ocean surface
+    output.m_Position.z = output.m_Position.w - 0.001f; // Push the skybox slightly back to prevent z-fighting with the ocean surface
 
     return output;
 }

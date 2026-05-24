@@ -85,5 +85,10 @@ protected:
 	UINT GetVertexInputLayout(D3D11_INPUT_ELEMENT_DESC*& inputLayout) override;
 
 	void GenerateMesh() override;
+
+	void ReleaseResources() override;
+
+private:
+	ID3D11ShaderResourceView** m_PixelShaderSRVs = { nullptr };
 };
 

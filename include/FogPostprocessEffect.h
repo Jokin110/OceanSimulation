@@ -18,6 +18,8 @@ struct PixelShaderConstantBufferDataFogPostprocessEffect
 	float m_FogFactorExponent;
 	XMFLOAT3 m_LightColor;
 	float m_LightScatteringIntensity;
+	float m_LightScatteringBias;
+	XMFLOAT3 m_Padding;
 };
 
 class FogPostprocessEffect : public PostprocessEffect<PixelShaderConstantBufferDataFogPostprocessEffect>

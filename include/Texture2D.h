@@ -8,8 +8,8 @@ using namespace std;
 class Texture2D
 {
 public:
-	Texture2D(int textureCount, string* paths, bool useSRV = true, bool useUAV = false);
-	Texture2D(int textureCount, UINT width, UINT height, bool useSRV = true, bool useUAV = true);
+	Texture2D(int textureCount, string* paths, bool useMipLevels = false, bool isCubemap = false, bool useSRV = true, bool useUAV = false);
+	Texture2D(int textureCount, UINT width, UINT height, bool useMipLevels = false, bool useSRV = true, bool useUAV = true);
 	~Texture2D();
 
 	bool Initialize();
@@ -24,6 +24,8 @@ private:
 
 	string* m_TexturePath = { nullptr };
 	bool m_LoadFromFile = false;
+	bool m_UseMipLevels = false;
+	bool m_IsCubemap = false;
 	bool m_UseSRV = true;
 	bool m_UseUAV = true;
 

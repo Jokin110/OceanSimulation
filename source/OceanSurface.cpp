@@ -1,6 +1,7 @@
 #include "OceanSurface.h"
 #include "CameraManager.h"
 #include "OceanComputeManager.h"
+#include "SceneManager.h"
 #include "imgui.h"
 #include <fstream>
 
@@ -8,7 +9,7 @@
 
 OceanSurface::~OceanSurface()
 {
-	
+	ReleaseResources();
 }
 
 bool OceanSurface::Initialize()
@@ -18,7 +19,21 @@ bool OceanSurface::Initialize()
 	m_Initialized = false;
 
 	m_DomainShaderSRVCount = CASCADE_COUNT;
-	m_PixelShaderSRVCount = CASCADE_COUNT;
+	m_PixelShaderSRVCount = 2 * CASCADE_COUNT + 1;
+
+	m_PixelShaderSRVs = new ID3D11ShaderResourceView * [m_PixelShaderSRVCount];
+
+	for (int i = 0; i < CASCADE_COUNT; i++)
+	{
+		m_PixelShaderSRVs[i] = OceanComputeManager::GetInstance().GetSlopeSRV()[i];
+	}
+
+	for (int i = 0; i < CASCADE_COUNT; i++)
+	{
+		m_PixelShaderSRVs[i + CASCADE_COUNT] = OceanComputeManager::GetInstance().GetSecondOrderMomentsSRV()[i];
+	}
+
+	m_PixelShaderSRVs[2 * CASCADE_COUNT] = SceneManager::GetInstance().GetSkyboxSRV()[0];
 
 	m_Initialized = true;
 
@@ -28,6 +43,18 @@ bool OceanSurface::Initialize()
 void OceanSurface::Start()
 {
 	Object::Start();
+
+	for (int i = 0; i < CASCADE_COUNT; i++)
+	{
+		m_PixelShaderSRVs[i] = OceanComputeManager::GetInstance().GetSlopeSRV()[i];
+	}
+
+	for (int i = 0; i < CASCADE_COUNT; i++)
+	{
+		m_PixelShaderSRVs[i + CASCADE_COUNT] = OceanComputeManager::GetInstance().GetSecondOrderMomentsSRV()[i];
+	}
+
+	m_PixelShaderSRVs[2 * CASCADE_COUNT] = SceneManager::GetInstance().GetSkyboxSRV()[0];
 }
 
 void OceanSurface::Update()
@@ -65,7 +92,7 @@ ID3D11ShaderResourceView* const* OceanSurface::GetDomainShaderSRVs()
 
 ID3D11ShaderResourceView* const* OceanSurface::GetPixelShaderSRVs()
 {
-	return OceanComputeManager::GetInstance().GetSlopeSRV();
+	return m_PixelShaderSRVs;
 }
 
 UINT OceanSurface::GetVertexInputLayout(D3D11_INPUT_ELEMENT_DESC*& inputLayout)
@@ -107,7 +134,7 @@ void OceanSurface::GenerateMesh()
 
 	float vertexSeparation = max(OceanComputeManager::GetInstance().GetMeshVertexSeparation(), 0.1f);
 
-	int numVertices = max(min(patchSize / vertexSeparation + 1, MAX_OCEAN_PATCH_SIDE_VERTICES), 2);
+	int numVertices = static_cast<int> max(min(patchSize / vertexSeparation + 1, MAX_OCEAN_PATCH_SIDE_VERTICES), 2);
 
 	vertexSeparation = patchSize / (numVertices - 1);
 
@@ -147,6 +174,13 @@ void OceanSurface::GenerateMesh()
 	}
 }
 
+void OceanSurface::ReleaseResources()
+{
+	Object::ReleaseResources();
+
+	if (m_PixelShaderSRVs) { delete[] m_PixelShaderSRVs; m_PixelShaderSRVs = nullptr; };
+}
+
 bool OceanSurface::RegenerateMeshAndPos(Vector3 position)
 {
 	ReleaseResources();
@@ -162,8 +196,8 @@ void OceanSurface::UpdatePixelShaderBuffer(const PixelShaderConstantBufferData& 
 {
 	m_PixelShaderConstantBufferData = pixelShaderBufferData;
 
-	if (GetPixelShaderConstantBuffers())
+	/*if (GetPixelShaderConstantBuffers())
 	{
 		D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(GetPixelShaderConstantBuffers(), 0, nullptr, &m_PixelShaderConstantBufferData, 0, 0);
-	}
+	}*/
 }

@@ -10,7 +10,7 @@ SceneManager::SceneManager()
 
 	for (int i = 0; i < OCEAN_SURFACE_SIDE_COUNT * OCEAN_SURFACE_SIDE_COUNT; i++)
 	{
-		m_Ocean[i] = new OceanSurface("Ocean Surface", L"assets/shaders/renderPipeline/OceanSurfaceVS.hlsl", L"assets/shaders/renderPipeline/PixelShader.hlsl", L"assets/shaders/renderPipeline/OceanSurfaceHS.hlsl", L"assets/shaders/renderPipeline/OceanSurfaceDS.hlsl", D3D11_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
+		m_Ocean[i] = new OceanSurface("Ocean Surface", L"assets/shaders/renderPipeline/OceanSurfaceVS.hlsl", L"assets/shaders/renderPipeline/OceanSurfacePS.hlsl", L"assets/shaders/renderPipeline/OceanSurfaceHS.hlsl", L"assets/shaders/renderPipeline/OceanSurfaceDS.hlsl", D3D11_PRIMITIVE_TOPOLOGY::D3D11_PRIMITIVE_TOPOLOGY_4_CONTROL_POINT_PATCHLIST);
 
 		m_Ocean[i]->SetPosition(Vector3((i % OCEAN_SURFACE_SIDE_COUNT - (OCEAN_SURFACE_SIDE_COUNT - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f), 0.0f, (i / OCEAN_SURFACE_SIDE_COUNT - (OCEAN_SURFACE_SIDE_COUNT - 1) / 2) * (OceanComputeManager::GetInstance().GetOceanPatchSize()[0] - 0.0f)));
 	}
@@ -62,6 +62,17 @@ bool SceneManager::Initialize()
 		{
 			inFile.read(reinterpret_cast<char*>(&m_Instance->m_PixelShaderSettings), sizeof(m_Instance->m_PixelShaderSettings));
 			inFile.close();
+		}
+
+		m_Instance->m_SunSettings.m_SunColor = XMFLOAT3(1.0f, 0.7f, 0.1f);
+		m_Instance->m_SunSettings.m_SunExponent = 2.0f;
+		m_Instance->m_SunSettings.m_SunBias = 0.7f;
+
+		std::ifstream sunSettings("SunSettings.bin", std::ios::binary);
+		if (sunSettings.is_open())
+		{
+			sunSettings.read(reinterpret_cast<char*>(&m_Instance->m_SunSettings), sizeof(m_Instance->m_SunSettings));
+			sunSettings.close();
 		}
 
 		return true;
@@ -130,6 +141,36 @@ void SceneManager::Update()
 			{
 				m_Ocean[i]->UpdatePixelShaderBuffer(m_PixelShaderSettings);
 			}
+		}
+	}
+
+	ImGui::End();
+
+	ImGui::Begin("Sun Settings", nullptr, windowFlags);
+
+	ImGui::ColorEdit3("Sun Color", (float*)&m_SunSettings.m_SunColor);
+	ImGui::SliderFloat("Sun Exponent", &m_SunSettings.m_SunExponent, 0.0f, 50.0f);
+	ImGui::SliderFloat("Sun Bias", &m_SunSettings.m_SunBias, 0.0f, 1.0f, "%.4f");
+
+	if (ImGui::Button("Save Settings"))
+	{
+		std::ofstream outFile("SunSettings.bin", std::ios::binary);
+		if (outFile.is_open())
+		{
+			outFile.write(reinterpret_cast<const char*>(&m_SunSettings), sizeof(m_SunSettings));
+			outFile.close();
+		}
+	}
+
+	ImGui::SameLine();
+
+	if (ImGui::Button("Load Settings"))
+	{
+		std::ifstream inFile("SunSettings.bin", std::ios::binary);
+		if (inFile.is_open())
+		{
+			inFile.read(reinterpret_cast<char*>(&m_SunSettings), sizeof(m_SunSettings));
+			inFile.close();
 		}
 	}
 

@@ -117,24 +117,6 @@
     <ClCompile Include="source\OceanComputeManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="imgui\imgui.cpp">
-      <Filter>Source Files\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui\imgui_draw.cpp">
-      <Filter>Source Files\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui\imgui_tables.cpp">
-      <Filter>Source Files\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui\imgui_widgets.cpp">
-      <Filter>Source Files\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui\backends\imgui_impl_dx11.cpp">
-      <Filter>Source Files\ImGui</Filter>
-    </ClCompile>
-    <ClCompile Include="imgui\backends\imgui_impl_glfw.cpp">
-      <Filter>Source Files\ImGui</Filter>
-    </ClCompile>
     <ClCompile Include="source\FFTManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -149,6 +131,24 @@
     </ClCompile>
     <ClCompile Include="source\FogPostprocessEffect.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui.cpp">
+      <Filter>Source Files\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui_draw.cpp">
+      <Filter>Source Files\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui_tables.cpp">
+      <Filter>Source Files\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\imgui_widgets.cpp">
+      <Filter>Source Files\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\backends\imgui_impl_dx11.cpp">
+      <Filter>Source Files\ImGui</Filter>
+    </ClCompile>
+    <ClCompile Include="external\imgui\backends\imgui_impl_glfw.cpp">
+      <Filter>Source Files\ImGui</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -176,7 +176,7 @@
     <FxCompile Include="assets\shaders\renderPipeline\OceanSurfaceVS.hlsl">
       <Filter>Resource Files\renderPipeline</Filter>
     </FxCompile>
-    <FxCompile Include="assets\shaders\renderPipeline\PixelShader.hlsl">
+    <FxCompile Include="assets\shaders\renderPipeline\OceanSurfacePS.hlsl">
       <Filter>Resource Files\renderPipeline</Filter>
     </FxCompile>
     <FxCompile Include="assets\shaders\renderPipeline\SkyBoxPS.hlsl">
@@ -197,5 +197,8 @@
     <FxCompile Include="assets\shaders\postprocessEffects\DefaultPostprocessEffect.hlsl">
       <Filter>Resource Files\postprocess</Filter>
     </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>

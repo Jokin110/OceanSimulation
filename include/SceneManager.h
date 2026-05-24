@@ -33,6 +33,8 @@ public:
 
     bool RegenerateMeshes();
 
+    ID3D11ShaderResourceView* const* GetSkyboxSRV() { return m_SkyBox->GetSkyboxSRV(); }
+
 	float GetFoamBias() const { return m_PixelShaderSettings.m_FoamBias; }
 	float GetDecayFactor() const { return m_PixelShaderSettings.m_DecayFactor; }
     float GetFoamAddition() const { return m_PixelShaderSettings.m_FoamAddition; }
@@ -40,10 +42,15 @@ public:
 	XMFLOAT3 GetLightDirection() const { return m_PixelShaderSettings.m_LightDirection; }
 	XMFLOAT3 GetLightColor() const { return m_PixelShaderSettings.m_LightColor; }
 
+    XMFLOAT3 GetSunColor() const { return m_SunSettings.m_SunColor; }
+    float GetSunExponent() const { return m_SunSettings.m_SunExponent; }
+    float GetSunBias() const { return m_SunSettings.m_SunBias; }
+
 private:
     static SceneManager* m_Instance;
 
     PixelShaderConstantBufferData m_PixelShaderSettings;
+    PerObjectPixelShaderConstantBufferDataSkyBox m_SunSettings;
 
     OceanSurface* m_Ocean[OCEAN_SURFACE_SIDE_COUNT * OCEAN_SURFACE_SIDE_COUNT] = { nullptr };
     SkyBox* m_SkyBox = nullptr;

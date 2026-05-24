@@ -25,6 +25,7 @@ OceanComputeManager::OceanComputeManager()
 
     m_DisplacementTexture = nullptr;
     m_SlopeTexture = nullptr;
+    m_SecondOrderMomentsTexture = nullptr;
 
 	m_InitialSpectrumComputeShader = nullptr;
 	m_TimeEvolutionComputeShader = nullptr;
@@ -272,18 +273,21 @@ void OceanComputeManager::GenerateDisplacementAndSlopeFinalTextures()
         ID3D11ShaderResourceView* allSRVs[4] = { m_XYDisplacementTexture->GetTextureSRVs()[i], m_ZDisplacementXXDerivativeTexture->GetTextureSRVs()[i], m_XZYXDerivativeTexture->GetTextureSRVs()[i], m_YZZZDerivativeTexture->GetTextureSRVs()[i] };
         context->CSSetShaderResources(0, 4, allSRVs);
 
-        ID3D11UnorderedAccessView* allUAVs[2] = { m_DisplacementTexture->GetTextureUAVs()[i], m_SlopeTexture->GetTextureUAVs()[i] };
-        context->CSSetUnorderedAccessViews(0, 2, allUAVs, nullptr);
+        ID3D11UnorderedAccessView* allUAVs[3] = { m_DisplacementTexture->GetTextureUAVs()[i], m_SlopeTexture->GetTextureUAVs()[i], m_SecondOrderMomentsTexture->GetTextureUAVs()[i] };
+        context->CSSetUnorderedAccessViews(0, 3, allUAVs, nullptr);
 
         UINT groupsX = m_OceanSimulationCascadeSettings.m_OceanTextureSize / 16;
         UINT groupsY = m_OceanSimulationCascadeSettings.m_OceanTextureSize / 16;
 
         context->Dispatch(groupsX, groupsY, 1);
 
-        ID3D11UnorderedAccessView* nullUAVs[2] = { nullptr, nullptr };
-        context->CSSetUnorderedAccessViews(0, 2, nullUAVs, nullptr);
+        ID3D11UnorderedAccessView* nullUAVs[3] = { nullptr, nullptr, nullptr };
+        context->CSSetUnorderedAccessViews(0, 3, nullUAVs, nullptr);
         ID3D11ShaderResourceView* nullSRVs[4] = { nullptr, nullptr, nullptr, nullptr };
         context->CSSetShaderResources(0, 4, nullSRVs);
+
+        context->GenerateMips(m_SlopeTexture->GetTextureSRVs()[i]);
+        context->GenerateMips(m_SecondOrderMomentsTexture->GetTextureSRVs()[i]);
     }
 }
 
@@ -538,6 +542,7 @@ bool OceanComputeManager::ResizeTextures()
 
     if (!m_DisplacementTexture->ResizeTexture(textureSize, textureSize)) return false;
     if (!m_SlopeTexture->ResizeTexture(textureSize, textureSize)) return false;
+    if (!m_SecondOrderMomentsTexture->ResizeTexture(textureSize, textureSize)) return false;
 
     return true;
 }
@@ -578,18 +583,19 @@ bool OceanComputeManager::CreateTextureAndViews()
 {
     int textureSize = GetOceanTextureSize();
 
-    m_InitialSpectrumTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize);
-    m_XYDisplacementTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize);
-    m_XYDisplacementPingPongTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false, true);
-    m_ZDisplacementXXDerivativeTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize);
-    m_ZDisplacementXXDerivativePingPongTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false, true);
-    m_XZYXDerivativeTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize);
-    m_XZYXDerivativePingPongTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false, true);
-    m_YZZZDerivativeTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize);
-    m_YZZZDerivativePingPongTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false, true);
+    m_InitialSpectrumTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false);
+    m_XYDisplacementTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false);
+    m_XYDisplacementPingPongTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false, false, true);
+    m_ZDisplacementXXDerivativeTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false);
+    m_ZDisplacementXXDerivativePingPongTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false, false, true);
+    m_XZYXDerivativeTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false);
+    m_XZYXDerivativePingPongTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false, false, true);
+    m_YZZZDerivativeTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false);
+    m_YZZZDerivativePingPongTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false, false, true);
 
-    m_DisplacementTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize);
-    m_SlopeTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize);
+    m_DisplacementTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, false);
+    m_SlopeTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, true);
+    m_SecondOrderMomentsTexture = new Texture2D(CASCADE_COUNT, textureSize, textureSize, true);
 
     if (!m_InitialSpectrumTexture->Initialize()) return false;
     if (!m_XYDisplacementTexture->Initialize()) return false;
@@ -603,6 +609,7 @@ bool OceanComputeManager::CreateTextureAndViews()
 
     if (!m_DisplacementTexture->Initialize()) return false;
     if (!m_SlopeTexture->Initialize()) return false;
+    if (!m_SecondOrderMomentsTexture->Initialize()) return false;
 
     return true;
 }
@@ -711,6 +718,7 @@ void OceanComputeManager::ReleaseTextureResources()
 
     DeleteTextureObject(m_DisplacementTexture);
     DeleteTextureObject(m_SlopeTexture);
+    DeleteTextureObject(m_SecondOrderMomentsTexture);
 
     if (m_d3dOceanSimulationSettingsBuffer) m_d3dOceanSimulationSettingsBuffer->Release(); m_d3dOceanSimulationSettingsBuffer = nullptr;
     if (m_d3dTimeEvolutionBuffer) m_d3dTimeEvolutionBuffer->Release(); m_d3dTimeEvolutionBuffer = nullptr; 

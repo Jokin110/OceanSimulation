@@ -55,6 +55,7 @@ bool FogPostprocessEffect::Initialize()
 	m_PixelShaderConstantBufferData.m_FogDensity = 0.08f;
 	m_PixelShaderConstantBufferData.m_HeightFalloff = 0.02f;
 	m_PixelShaderConstantBufferData.m_LightScatteringIntensity = 1.0f;
+	m_PixelShaderConstantBufferData.m_LightScatteringBias = 0.4f;
 	m_PixelShaderConstantBufferData.m_FogFactorExponent = 1.0f;
 
 	std::ifstream inFile("FogSettings.bin", std::ios::binary);
@@ -88,6 +89,7 @@ void FogPostprocessEffect::Update()
 	ImGui::SliderFloat("Fog Density", &m_PixelShaderConstantBufferData.m_FogDensity, 0.0f, 0.1f, "%.4f");
 	ImGui::SliderFloat("Height Falloff", &m_PixelShaderConstantBufferData.m_HeightFalloff, 0.0f, 0.1f, "%.4f");
 	ImGui::SliderFloat("Light Scattering Intensity", &m_PixelShaderConstantBufferData.m_LightScatteringIntensity, 0.0f, 50.0f, "%.4f");
+	ImGui::SliderFloat("Light Scattering Bias", &m_PixelShaderConstantBufferData.m_LightScatteringBias, 0.0f, 1.0f, "%.4f");
 	ImGui::SliderFloat("Fog Factor Exponent", &m_PixelShaderConstantBufferData.m_FogFactorExponent, 0.1f, 5.0f, "%.4f");
 
 	if (ImGui::Button("Save Settings"))
@@ -121,7 +123,7 @@ void FogPostprocessEffect::Render()
 	m_PixelShaderConstantBufferData.m_InverseViewProjectionMatrix = XMMatrixInverse(nullptr, viewProjectionMatrix);
 	m_PixelShaderConstantBufferData.m_CameraPosition = CameraManager::GetInstance().GetCameraPosition();
 	m_PixelShaderConstantBufferData.m_LightDirection = SceneManager::GetInstance().GetLightDirection();
-	m_PixelShaderConstantBufferData.m_LightColor = SceneManager::GetInstance().GetLightColor();
+	m_PixelShaderConstantBufferData.m_LightColor = SceneManager::GetInstance().GetSunColor();
 
     PostprocessEffect::Render();
 }

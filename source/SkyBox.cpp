@@ -1,12 +1,13 @@
 #include "SkyBox.h"
 #include "CameraManager.h"
+#include "SceneManager.h"
 
 SkyBox::SkyBox(string name) : Object(name)
 {
     m_VertexShaderFile = m_VertexShaderFilePath;
 	m_PixelShaderFile = m_PixelShaderFilePath;
 
-	m_SkyBoxTexture = new Texture2D(SKYBOX_TEXTURE_COUNT, m_SkyBoxTextureFilePath);
+	m_SkyBoxTexture = new Texture2D(SKYBOX_TEXTURE_COUNT, &m_SkyBoxTextureFilePath, true, true, true, false);
 
     m_PixelShaderSRVCount = SKYBOX_TEXTURE_COUNT;
 }
@@ -82,6 +83,11 @@ void SkyBox::Update()
 
 	m_VertexShaderConstantBufferData = {};
     m_VertexShaderConstantBufferData.m_WorldViewProjectionMatrix = XMMatrixMultiply(worldMatrix, XMMatrixMultiply(CameraManager::GetInstance().GetViewMatrix(), CameraManager::GetInstance().GetProjectionMatrix()));
+
+    m_PixelShaderConstantBufferData.m_SunDir = SceneManager::GetInstance().GetLightDirection();
+    m_PixelShaderConstantBufferData.m_SunColor = SceneManager::GetInstance().GetSunColor();
+    m_PixelShaderConstantBufferData.m_SunExponent = SceneManager::GetInstance().GetSunExponent();
+    m_PixelShaderConstantBufferData.m_SunBias = SceneManager::GetInstance().GetSunBias();
 
 	Object::Update();
 }

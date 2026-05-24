@@ -110,6 +110,7 @@ public:
     ID3D11ShaderResourceView* const* GetInitialSpectrumSRV() const { return m_InitialSpectrumTexture->GetTextureSRVs(); }
 	ID3D11ShaderResourceView* const* GetDisplacementSRV() const { return m_DisplacementTexture->GetTextureSRVs(); }
 	ID3D11ShaderResourceView* const* GetSlopeSRV() const { return m_SlopeTexture->GetTextureSRVs(); }
+	ID3D11ShaderResourceView* const* GetSecondOrderMomentsSRV() const { return m_SecondOrderMomentsTexture->GetTextureSRVs(); }
 
 	TessellationSettingsData GetTessellationSettingsData() { return m_TessellationSettingsData; }
 
@@ -186,6 +187,7 @@ private:
 	// Displacement and slope resources
 	Texture2D* m_DisplacementTexture = nullptr;
 	Texture2D* m_SlopeTexture = nullptr;
+	Texture2D* m_SecondOrderMomentsTexture = nullptr;
 
 	// Compute shaders pointers
     ID3D11ComputeShader* m_InitialSpectrumComputeShader = nullptr;

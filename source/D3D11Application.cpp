@@ -229,7 +229,7 @@ bool D3D11Application::Initialize()
 
 bool D3D11Application::InitializeManagers()
 {
-    srand(time(NULL));
+    srand(static_cast<unsigned int>(time(NULL)));
 
     if (!TimeManager::Initialize())
     {
