@@ -91,12 +91,12 @@ float Fresnel(float3 viewDir, float3 halfVector, float2x2 covarianceMatrix)
 {
     float R = pow(m_Snell - 1.0f, 2) / pow(m_Snell + 1.0f, 2);
     
-    float length = sqrt(viewDir.x * viewDir.x + viewDir.z * viewDir.z);
+    float len = sqrt(viewDir.x * viewDir.x + viewDir.z * viewDir.z);
     
-    length = max(length, 0.000001f);
+    len = max(len, 0.000001f);
     
-    float cosPhi = viewDir.x / length;
-    float sinPhi = viewDir.z / length;
+    float cosPhi = viewDir.x / len;
+    float sinPhi = viewDir.z / len;
     
     float projectedRoughness = sqrt(covarianceMatrix._11 * cosPhi * cosPhi + covarianceMatrix._22 * sinPhi * sinPhi + 2.0f * cosPhi * sinPhi * covarianceMatrix._12) * SQRT_2;
 
@@ -105,27 +105,45 @@ float Fresnel(float3 viewDir, float3 halfVector, float2x2 covarianceMatrix)
     return R + (1.0f - R) * pow(1.0f - cosTheta, 5.0f * exp(-2.69f * projectedRoughness)) / (1.0f + 22.7f * pow(projectedRoughness, 1.5f));
 }
 
-float3 SpecularColor(float D, float G, float3 normal, float3 macronormal, float3 viewDir)
+float3 SpecularColor(float D, float G, float F, float3 normal, float3 macronormal, float3 viewDir)
 {
-    return dot(normal, macronormal) * m_LightColor * D * G / (4.0f * max(dot(normal, viewDir), 0.000001f));
+    return dot(normal, macronormal) / max(dot(normal, viewDir), 0.000001f) * m_LightColor * D * G * F / 4.0f;
 }
 
-float3 EnvironmentalColor(float2x2 covarianceMatrix, float2 totalSlope, float3 viewDir)
+float3 EnvironmentalColor(float2x2 covarianceMatrix, float2 totalSlope, float3 viewDir, float3 normal, float3 macronormal)
 {
+    float lambda = 1.0f;
+    
     float standardDeviationX = sqrt(abs(covarianceMatrix._11));
     float standardDeviationY = sqrt(abs(covarianceMatrix._22));
     
     float correlationCoefficient = covarianceMatrix._12 / max(standardDeviationX * standardDeviationY, 0.000001f);
     
     float3 environmentalColor = 0.0f;
-    float totalWeight = 0.0f;
     
-    for (int i = -1; i <= 1; i++)
+    float Wj[3];
+    
+    float A = pow(2.0f * lambda * max(standardDeviationX, standardDeviationY) / 3.0f, 2);
+    
+    for (int j = -1; j <= 1; j++)
     {
-        for (int j = 1; j >= -1; j--)
+        float denominator = 0.0f;
+        
+        for (int k = 1; k >= -1; k--)
         {
-            float2 gridCellTilt = float2(i, j);
-            float weight = exp(-0.5f * dot(gridCellTilt, gridCellTilt));
+            denominator += exp(-0.5f * k * k);
+        }
+        
+        Wj[j + 1] = exp(-0.5f * j * j) / max(denominator, 0.000001);
+    }
+    
+    for (int x = -1; x <= 1; x++)
+    {
+        for (int z = 1; z >= -1; z--)
+        {
+            float2 gridCellTilt = float2(x, z) * lambda;
+            
+            float Wn = Wj[x + 1] * Wj[z + 1];
             
             gridCellTilt = float2(standardDeviationX * gridCellTilt.x, standardDeviationY * (gridCellTilt.x * correlationCoefficient + sqrt(1.0f - correlationCoefficient * correlationCoefficient) * gridCellTilt.y));
             
@@ -133,21 +151,27 @@ float3 EnvironmentalColor(float2x2 covarianceMatrix, float2 totalSlope, float3 v
             
             float3 cellNormal = normalize(float3(-gridCellTilt.x, 1.0f, -gridCellTilt.y));
             
+            float normalDotView = dot(cellNormal, viewDir);
+            float normalDotMacronormal = dot(cellNormal, macronormal);
+            
             float3 reflectedViewDir = normalize(reflect(-viewDir, cellNormal));
             
-            environmentalColor += SkyboxTexture.Sample(LinearSampler, reflectedViewDir).xyz * weight;
-            totalWeight += weight;
+            float maskingShadowing = MaskingShadowing(viewDir, reflectedViewDir, totalSlope, covarianceMatrix);
+            float fresnel = Fresnel(viewDir, cellNormal, covarianceMatrix);
+            
+            float J = 4.0f * abs(normalDotView) * pow(abs(normalDotMacronormal), 3);
+            float alpha = J * A;
+            
+            environmentalColor += Wn * maskingShadowing * fresnel * max(0.0f, normalDotView) / max(normalDotMacronormal, 0.000001f) * SkyboxTexture.SampleLevel(LinearSampler, reflectedViewDir, alpha).xyz;
         }
     }
     
-    environmentalColor /= totalWeight;
-    
-    environmentalColor = environmentalColor * m_AmbientLightIntensity;    
+    environmentalColor = dot(normal, macronormal) / max(dot(normal, viewDir), 0.000001f) * environmentalColor;
     
     return environmentalColor;
 }
 
-float3 ScatteredLight(float3 lightDir, float3 viewDir, float3 normal, float height, float smithLight)
+float3 ScatteredLight(float3 lightDir, float3 viewDir, float3 normal, float height, float smithLight, float foam)
 {
     height = max(0.0f, height);
     
@@ -161,7 +185,7 @@ float3 ScatteredLight(float3 lightDir, float3 viewDir, float3 normal, float heig
 
     scatteredLight += (m_K3 * max(0.0f, dot(lightDir, normal))) * m_WaterScatterColor * m_LightColor;
     
-    scatteredLight += (m_K4 * m_DensityOfAirBubblesSpreadInWater) * (m_AirBubblesColor * m_LightColor);
+    scatteredLight += (m_K4 * foam) * (m_AirBubblesColor * m_LightColor);
     
     return scatteredLight;
 }
@@ -190,7 +214,7 @@ PSOutput Main(PSInput input)
         totalFoam += slopeSample.a;
     }
     
-    float baseVariance = 0.005f;
+    float baseVariance = 0.00f;
     
     float xVariance = totalSecondOrderMoments.x - totalSlope.x * totalSlope.x + baseVariance;
     float yVariance = totalSecondOrderMoments.y - totalSlope.y * totalSlope.y + baseVariance;
@@ -220,12 +244,14 @@ PSOutput Main(PSInput input)
     float fresnel = Fresnel(viewDir, halfVector, covarianceMatrix);
     //float fresnel = pow(1.0 - max(0, dot(viewDir, normal)), 5);
     
-    float3 specularColor = SpecularColor(D, maskingShadowingValue, normal, macronormal, viewDir) * fresnel;
+    float3 specularColor = SpecularColor(D, maskingShadowingValue, fresnel, normal, macronormal, viewDir);
+    //specularColor = specularColor / (1.0f + specularColor);
     
-    float3 environmentalColor = EnvironmentalColor(covarianceMatrix, totalSlope, viewDir) * fresnel;
+    float3 environmentalColor = EnvironmentalColor(covarianceMatrix, totalSlope, viewDir, normal, macronormal);
+    //environmentalColor = environmentalColor / (1.0f + environmentalColor);
     
     float smithLight = Smith(-lightDir, totalSlope, covarianceMatrix);
-    float3 scatteredLight = ScatteredLight(-lightDir, viewDir, normal, input.WorldPosition.y, smithLight) * (1.0f - fresnel);
+    float3 scatteredLight = ScatteredLight(-lightDir, viewDir, normal, input.WorldPosition.y, smithLight, foam) * (1.0f - fresnel);
     
     float3 finalColor = specularColor + environmentalColor + scatteredLight;
     
@@ -235,8 +261,10 @@ PSOutput Main(PSInput input)
     //float3 diffuseLight = m_LightColor * input.Color * max(0, dot(normal, -lightDir));
     ////float3 specularLight = m_SpecularColor * pow(max(0, dot(halfVector, normal)), 32) * fresnel;
     
-    //float3 reflectedViewDir = normalize(reflect(viewDir, normal));
-    //float3 environmentalReflection = SkyboxTexture.Sample(LinearSampler, reflectedViewDir).xyz * m_AmbientLightIntensity * fresnel;
+    //float3 reflectedViewDir = normalize(reflect(-viewDir, normal));
+    //float3 environmentalReflection = SkyboxTexture.Sample(LinearSampler, reflectedViewDir).xyz * m_AmbientLightIntensity;// * fresnel;
+    
+    //finalColor = environmentalReflection;
     
     //float3 finalColor = ambientLight + diffuseLight + specularColor + environmentalColor;
     //finalColor = finalColor / (1.0f + finalColor);
