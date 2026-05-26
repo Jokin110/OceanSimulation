@@ -72,6 +72,8 @@ DSOutput Main(PatchTess patchTess, float2 uv : SV_DomainLocation, const OutputPa
     
     float3 worldPosition = mul(float4(localPos, 1.0), m_WorldMatrix).xyz;
     
+    
+    
     output.WorldPosition = worldPosition;
     output.ViewVector = m_CameraPosition - worldPosition;
     output.EyePos = m_CameraPosition;

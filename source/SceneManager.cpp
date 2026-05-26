@@ -7,6 +7,7 @@ SceneManager* SceneManager::m_Instance = nullptr;
 SceneManager::SceneManager()
 {
 	m_PixelShaderSettings = {};
+	m_SunSettings = {};
 
 	for (int i = 0; i < OCEAN_SURFACE_SIDE_COUNT * OCEAN_SURFACE_SIDE_COUNT; i++)
 	{
@@ -52,10 +53,14 @@ bool SceneManager::Initialize()
 		m_Instance->m_PixelShaderSettings.m_LightDirection = XMFLOAT3(0.0f, -0.5f, -1.0f);
 		m_Instance->m_PixelShaderSettings.m_SpecularColor = XMFLOAT3(1.0f, 1.0f, 1.0f);
 
-		m_Instance->m_PixelShaderSettings.m_UpwellingColor = XMFLOAT3(0.1f, 0.3f, 0.4f);
-		m_Instance->m_PixelShaderSettings.m_Snell = 1.33f;
-		m_Instance->m_PixelShaderSettings.m_AirColor = XMFLOAT3(0.1f, 0.1f, 0.1f);
-		m_Instance->m_PixelShaderSettings.m_kDiffuse = 0.01f;
+		m_Instance->m_PixelShaderSettings.m_K1 = 1.0f;
+		m_Instance->m_PixelShaderSettings.m_K2 = 1.0f;
+		m_Instance->m_PixelShaderSettings.m_K3 = 1.0f;
+		m_Instance->m_PixelShaderSettings.m_K4 = 1.0f;
+
+		m_Instance->m_PixelShaderSettings.m_WaterScatterColor = XMFLOAT3(0.0f, 0.3f, 0.5f);
+		m_Instance->m_PixelShaderSettings.m_AirBubblesColor = XMFLOAT3(0.8f, 0.9f, 1.0f);
+		m_Instance->m_PixelShaderSettings.m_DensityOfAirBubblesSpreadInWater = 0.5f;
 
 		std::ifstream inFile("OceanSettings.bin", std::ios::binary);
 		if (inFile.is_open())
@@ -102,10 +107,14 @@ void SceneManager::Update()
 	ImGui::SliderFloat("Ambient Light Intensity", &m_PixelShaderSettings.m_AmbientLightIntensity, 0.0f, 1.0f);
 	ImGui::SliderFloat3("Light Direction", (float*)&m_PixelShaderSettings.m_LightDirection, -1.0f, 1.0f);
 	ImGui::ColorEdit3("Specular Color", (float*)&m_PixelShaderSettings.m_SpecularColor);
-	ImGui::ColorEdit3("Upwelling Color", (float*)&m_PixelShaderSettings.m_UpwellingColor);
 	ImGui::SliderFloat("Snell's Index", &m_PixelShaderSettings.m_Snell, 1.0f, 2.0f);
-	ImGui::ColorEdit3("Air Color", (float*)&m_PixelShaderSettings.m_AirColor);
-	ImGui::SliderFloat("Diffuse Coefficient", &m_PixelShaderSettings.m_kDiffuse, 0.0f, 1.0f);
+	ImGui::SliderFloat("K1", &m_PixelShaderSettings.m_K1, 0.0f, 5.0f);
+	ImGui::SliderFloat("K2", &m_PixelShaderSettings.m_K2, 0.0f, 5.0f);
+	ImGui::SliderFloat("K3", &m_PixelShaderSettings.m_K3, 0.0f, 5.0f);
+	ImGui::SliderFloat("K4", &m_PixelShaderSettings.m_K4, 0.0f, 5.0f);
+	ImGui::ColorEdit3("Water Scatter Color", (float*)&m_PixelShaderSettings.m_WaterScatterColor);
+	ImGui::ColorEdit3("Air Bubbles Color", (float*)&m_PixelShaderSettings.m_AirBubblesColor);
+	ImGui::SliderFloat("Density of Air Bubbles Spread in Water", &m_PixelShaderSettings.m_DensityOfAirBubblesSpreadInWater, 0.0f, 1.0f);
 
 	if (ImGui::Button("Apply Changes"))
 	{

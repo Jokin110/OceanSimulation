@@ -58,10 +58,16 @@ struct PixelShaderConstantBufferData
 	XMFLOAT3 m_SpecularColor;
 	float m_FoamAddition;
 
-	XMFLOAT3 m_UpwellingColor;
 	float m_Snell;
-	XMFLOAT3 m_AirColor;
-	float m_kDiffuse;
+
+	float m_K1;
+	float m_K2;
+	float m_K3;
+	float m_K4;
+
+	XMFLOAT3 m_WaterScatterColor;
+	XMFLOAT3 m_AirBubblesColor;
+	float m_DensityOfAirBubblesSpreadInWater;
 };
 
 class OceanSurface : public Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBufferData, HullShaderConstantBufferData, DomainShaderConstantBufferData>
