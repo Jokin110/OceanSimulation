@@ -70,6 +70,12 @@ DSOutput Main(PatchTess patchTess, float2 uv : SV_DomainLocation, const OutputPa
         localPos += displacementData.xyz;
     }
     
+    float3 originalWorldPos = mul(float4(0.0f, 0.0f, 0.0f, 1.0f), m_WorldMatrix).xyz;
+    
+    float distance = length(originalWorldPos - m_CameraPosition);
+    
+    localPos *= saturate((1500.0f - distance) / 500.0f);
+    
     float3 worldPosition = mul(float4(localPos, 1.0), m_WorldMatrix).xyz;
     
     output.WorldPosition = worldPosition;

@@ -5,6 +5,8 @@ Texture2D<float4> ZDisplacementXXDerivativeTexture : register(t1);
 Texture2D<float4> XZYXDerivativeTexture : register(t2);
 Texture2D<float4> YZZZDerivativeTexture : register(t3);
 
+Texture2D<float4> PreviousSlopeTexture : register(t4);
+
 // Displacement and slope output textures
 RWTexture2D<float4> DisplacementTexture : register(u0);
 RWTexture2D<float4> SlopeTexture : register(u1);
@@ -17,7 +19,8 @@ cbuffer DisplacementAndSlopeParams : register(b0)
     float m_DeltaTime;
     float m_FoamAddition;
     float m_ChoppinessFactor;
-    float3 m_Padding;
+    int m_TextureResolution;
+    float2 m_Padding;
 };
 
 [numthreads(16, 16, 1)]
@@ -53,7 +56,24 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     
     float jacobian = Jxx * Jzz - Jxz * Jxz;
     
-    float foam = saturate(SlopeTexture[uv].a * exp(-m_DecayFactor * m_DeltaTime));
+    float blurredFoam = 0.0f;
+    
+    for (int i = -1; i <= 1; i++)
+    {
+        for (int j = -1; j <= 1; j++)
+        {
+            int localX = i + (int) uv.x;
+            int localY = j + (int) uv.y;
+            
+            uint2 localUVs = uint2((localX + m_TextureResolution) % m_TextureResolution, (localY + m_TextureResolution) % m_TextureResolution);
+            
+            blurredFoam += PreviousSlopeTexture[localUVs].a;
+        }
+    }
+    
+    blurredFoam /= 9.0f;
+    
+    float foam = saturate(blurredFoam * exp(-m_DecayFactor * m_DeltaTime));
     
     float jacobianDifference = m_FoamBias - jacobian;
     
@@ -65,5 +85,4 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     DisplacementTexture[uv] = float4(xyDisplacement.r * m_ChoppinessFactor, xyDisplacement.b, zDisplacementXXDerivative.r * m_ChoppinessFactor, 0.0f);
     SlopeTexture[uv] = float4(slopeX, slopeZ, 0.0f, foam);
     SecondOrderMoments[uv] = float4(slopeX * slopeX, slopeZ * slopeZ, slopeX * slopeZ, 0.0f);
-
 }

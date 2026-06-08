@@ -62,6 +62,9 @@ bool SceneManager::Initialize()
 		m_Instance->m_PixelShaderSettings.m_AirBubblesColor = XMFLOAT3(0.8f, 0.9f, 1.0f);
 		m_Instance->m_PixelShaderSettings.m_DensityOfAirBubblesSpreadInWater = 0.5f;
 
+		m_Instance->m_PixelShaderSettings.m_FoamRoughnessMultiplier = 0.2f;
+		m_Instance->m_PixelShaderSettings.m_TextureResolution = OceanComputeManager::GetInstance().GetOceanTextureSize();
+
 		std::ifstream inFile("OceanSettings.bin", std::ios::binary);
 		if (inFile.is_open())
 		{
@@ -103,6 +106,7 @@ void SceneManager::Update()
 	ImGui::SliderFloat("Foam Bias", &m_PixelShaderSettings.m_FoamBias, 0.0f, 1.0f);
 	ImGui::SliderFloat("Decay Factor", &m_PixelShaderSettings.m_DecayFactor, 0.0f, 1.0f);
 	ImGui::SliderFloat("Foam Addition", &m_PixelShaderSettings.m_FoamAddition, 0.0f, 5.0f);
+	ImGui::SliderFloat("Foam Roughness", &m_PixelShaderSettings.m_FoamRoughnessMultiplier, 0.0f, 5.0f);
 	ImGui::ColorEdit3("Light Color", (float*)&m_PixelShaderSettings.m_LightColor);
 	ImGui::SliderFloat("Ambient Light Intensity", &m_PixelShaderSettings.m_AmbientLightIntensity, 0.0f, 1.0f);
 	ImGui::SliderFloat3("Light Direction", (float*)&m_PixelShaderSettings.m_LightDirection, -1.0f, 1.0f);
@@ -184,6 +188,13 @@ void SceneManager::Update()
 	}
 
 	ImGui::End();
+
+	m_PixelShaderSettings.m_TextureResolution = OceanComputeManager::GetInstance().GetOceanTextureSize();
+
+	for (int i = 0; i < OCEAN_SURFACE_SIDE_COUNT * OCEAN_SURFACE_SIDE_COUNT; i++)
+	{
+		m_Ocean[i]->UpdatePixelShaderBuffer(m_PixelShaderSettings);
+	}
 }
 
 bool SceneManager::RegenerateMeshes()

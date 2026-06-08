@@ -57,7 +57,8 @@ struct DisplacementAndSlopeData
 	float m_DeltaTime;
 	float m_FoamAddition;
 	float m_ChoppinessFactor;
-	XMFLOAT3 m_Padding;
+	int m_TextureResolution;
+	XMFLOAT2 m_Padding;
 };
 
 struct TessellationSettingsData
@@ -109,7 +110,7 @@ public:
 
     ID3D11ShaderResourceView* const* GetInitialSpectrumSRV() const { return m_InitialSpectrumTexture->GetTextureSRVs(); }
 	ID3D11ShaderResourceView* const* GetDisplacementSRV() const { return m_DisplacementTexture->GetTextureSRVs(); }
-	ID3D11ShaderResourceView* const* GetSlopeSRV() const { return m_SlopeTexture->GetTextureSRVs(); }
+	ID3D11ShaderResourceView* const* GetSlopeSRV() const { return m_CurrentSlopeTexture->GetTextureSRVs(); }
 	ID3D11ShaderResourceView* const* GetSecondOrderMomentsSRV() const { return m_SecondOrderMomentsTexture->GetTextureSRVs(); }
 
 	TessellationSettingsData GetTessellationSettingsData() { return m_TessellationSettingsData; }
@@ -186,7 +187,8 @@ private:
 
 	// Displacement and slope resources
 	Texture2D* m_DisplacementTexture = nullptr;
-	Texture2D* m_SlopeTexture = nullptr;
+	Texture2D* m_CurrentSlopeTexture = nullptr;
+	Texture2D* m_PreviousSlopeTexture = nullptr;
 	Texture2D* m_SecondOrderMomentsTexture = nullptr;
 
 	// Compute shaders pointers

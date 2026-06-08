@@ -7,6 +7,13 @@
 
 #define MAX_OCEAN_PATCH_SIDE_VERTICES 512
 
+OceanSurface::OceanSurface(string name, wstring vertexShaderFile, wstring pixelShaderFile, wstring hullShaderFile, wstring domainShaderFile, D3D11_PRIMITIVE_TOPOLOGY topology) : Object(name, vertexShaderFile, pixelShaderFile, hullShaderFile, domainShaderFile, topology)
+{
+	m_FoamTexture = new Texture2D(1, &m_FoamTextureFilePath, false, false, true, false);
+
+	m_PixelShaderSRVs = nullptr;
+}
+
 OceanSurface::~OceanSurface()
 {
 	ReleaseResources();
@@ -18,8 +25,39 @@ bool OceanSurface::Initialize()
 
 	m_Initialized = false;
 
+	result = result && m_FoamTexture->Initialize();
+
+	if (m_d3dSamplerState)
+	{
+		m_d3dSamplerState->Release();
+		m_d3dSamplerState = nullptr;
+	}
+
+	D3D11_SAMPLER_DESC samplerDesc = {};
+	samplerDesc.Filter = D3D11_FILTER_ANISOTROPIC;
+	samplerDesc.AddressU = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressV = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.AddressW = D3D11_TEXTURE_ADDRESS_WRAP;
+	samplerDesc.MipLODBias = 0.0f;
+	samplerDesc.MaxAnisotropy = 16;
+	samplerDesc.ComparisonFunc = D3D11_COMPARISON_ALWAYS;
+	samplerDesc.BorderColor[0] = 0.0f;
+	samplerDesc.BorderColor[1] = 0.0f;
+	samplerDesc.BorderColor[2] = 0.0f;
+	samplerDesc.BorderColor[3] = 0.0f;
+	samplerDesc.MinLOD = 0.0f;
+	samplerDesc.MaxLOD = D3D11_FLOAT32_MAX;
+
+	if (FAILED(D3D11Application::GetInstance().GetDevice()->CreateSamplerState(
+		&samplerDesc,
+		&m_d3dSamplerState)))
+	{
+		cout << "D3D11: Failed to create sampler state\n";
+		return false;
+	}
+
 	m_DomainShaderSRVCount = CASCADE_COUNT;
-	m_PixelShaderSRVCount = 2 * CASCADE_COUNT + 1;
+	m_PixelShaderSRVCount = 2 * CASCADE_COUNT + 2;
 
 	m_PixelShaderSRVs = new ID3D11ShaderResourceView * [m_PixelShaderSRVCount];
 
@@ -34,6 +72,8 @@ bool OceanSurface::Initialize()
 	}
 
 	m_PixelShaderSRVs[2 * CASCADE_COUNT] = SceneManager::GetInstance().GetSkyboxSRV()[0];
+
+	m_PixelShaderSRVs[2 * CASCADE_COUNT + 1] = m_FoamTexture->GetTextureSRVs()[0];
 
 	m_Initialized = true;
 
@@ -59,6 +99,11 @@ void OceanSurface::Start()
 
 void OceanSurface::Update()
 {
+	for (int i = 0; i < CASCADE_COUNT; i++)
+	{
+		m_PixelShaderSRVs[i] = OceanComputeManager::GetInstance().GetSlopeSRV()[i];
+	}
+
 	XMMATRIX scaleMatrix = XMMatrixScaling(m_Scale.x, m_Scale.y, m_Scale.z);
 	XMMATRIX rotationMatrix = XMMatrixRotationRollPitchYaw(XMConvertToRadians(m_Rotation.x), XMConvertToRadians(m_Rotation.y), XMConvertToRadians(m_Rotation.z));
 	XMMATRIX translationMatrix = XMMatrixTranslation(m_Position.x, m_Position.y, m_Position.z);
@@ -178,12 +223,20 @@ void OceanSurface::ReleaseResources()
 {
 	Object::ReleaseResources();
 
+	if (m_FoamTexture)
+	{
+		delete m_FoamTexture;
+		m_FoamTexture = nullptr;
+	}
+
 	if (m_PixelShaderSRVs) { delete[] m_PixelShaderSRVs; m_PixelShaderSRVs = nullptr; };
 }
 
 bool OceanSurface::RegenerateMeshAndPos(Vector3 position)
 {
 	ReleaseResources();
+
+	m_FoamTexture = new Texture2D(1, &m_FoamTextureFilePath, false, false, true, false);
 
 	bool value = Initialize();
 

@@ -1,8 +1,9 @@
 #pragma once
 
-#include "Object.h"
-
 #include <DirectXMath.h>
+
+#include "Object.h"
+#include "Texture2D.h"
 
 using namespace DirectX;
 
@@ -68,12 +69,16 @@ struct PixelShaderConstantBufferData
 	XMFLOAT3 m_WaterScatterColor;
 	XMFLOAT3 m_AirBubblesColor;
 	float m_DensityOfAirBubblesSpreadInWater;
+
+	float m_FoamRoughnessMultiplier;
+	int m_TextureResolution;
+	XMFLOAT2 m_Padding;
 };
 
 class OceanSurface : public Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBufferData, HullShaderConstantBufferData, DomainShaderConstantBufferData>
 {
 public:
-	OceanSurface(string name, wstring vertexShaderFile, wstring pixelShaderFile, wstring hullShaderFile, wstring domainShaderFile, D3D11_PRIMITIVE_TOPOLOGY topology) : Object(name, vertexShaderFile, pixelShaderFile, hullShaderFile, domainShaderFile, topology) {}
+	OceanSurface(string name, wstring vertexShaderFile, wstring pixelShaderFile, wstring hullShaderFile, wstring domainShaderFile, D3D11_PRIMITIVE_TOPOLOGY topology);
 	~OceanSurface();
 
 	bool Initialize() override;
@@ -95,6 +100,10 @@ protected:
 	void ReleaseResources() override;
 
 private:
+	string m_FoamTextureFilePath = "images/foamTexture.jpg";
+
+	Texture2D* m_FoamTexture = nullptr;
+
 	ID3D11ShaderResourceView** m_PixelShaderSRVs = { nullptr };
 };
 

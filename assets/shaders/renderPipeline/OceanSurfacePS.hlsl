@@ -1,6 +1,7 @@
 
 #define PI 3.14159265359
 #define SQRT_2 1.414213562
+#define CASCADE_COUNT 4
 
 struct PSInput
 {
@@ -38,17 +39,22 @@ cbuffer RenderingValuesBuffer : register(b0)
     float3 m_WaterScatterColor;
     float3 m_AirBubblesColor;
     float m_DensityOfAirBubblesSpreadInWater;
+    
+    float m_FoamRoughnessMultiplier;
+    int m_TextureResolution;
+    float2 m_Padding;
 }
 
 Texture2D SlopeTextureCascade[4] : register(t0);
 Texture2D SecondOrderMomentsCascade[4] : register(t4);
 TextureCube SkyboxTexture : register(t8);
+Texture2D FoamTexture : register(t9);
 SamplerState LinearSampler : register(s0);
 
 float BeckmannDistribution(float2 halfVectorSlopes, float2 averageSlope, float2x2 covarianceMatrix)
 {
     float2 difference = halfVectorSlopes - averageSlope;
-    float determinant = max(covarianceMatrix._11 * covarianceMatrix._22 - covarianceMatrix._12 * covarianceMatrix._21, 0.00001f);
+    float determinant = max(covarianceMatrix._11 * covarianceMatrix._22 - covarianceMatrix._12 * covarianceMatrix._21, 1e-9f);
     
     float matrixMultiplication = (difference.x * difference.x * covarianceMatrix._22 + difference.y * difference.y * covarianceMatrix._11 - 2.0f * difference.x * difference.y * covarianceMatrix._12) / determinant;
 
@@ -59,13 +65,18 @@ float BeckmannDistribution(float2 halfVectorSlopes, float2 averageSlope, float2x
 
 float NormalDistribution(float p22, float3 halfVector, float3 macronormal)
 {
-    return p22 / max(pow(dot(halfVector, macronormal), 4), 0.00001f);
+    float cosTheta = dot(halfVector, macronormal);
+    
+    if (cosTheta < 0.00001f)
+        return 0.0f;
+    
+    return p22 / max(pow(cosTheta, 4), 0.00001f);
 }
 
 float Smith(float3 dir, float2 averageSlopes, float2x2 covarianceMatrix)
 {        
-    if (dir.y <= 0.000001f)
-        return 9999.0f;
+    //if (dir.y <= 0.000001f)
+    //    return 9999.0f;
     
     float muPhi = dir.x * averageSlopes.x + dir.z * averageSlopes.y;
     
@@ -74,6 +85,9 @@ float Smith(float3 dir, float2 averageSlopes, float2x2 covarianceMatrix)
     sigmaPhiSquare = max(sigmaPhiSquare, 0.000001f);
     
     float v = (dir.y - muPhi) / (sqrt(sigmaPhiSquare) * SQRT_2);
+    
+    if (v < 0.000001f)
+        return 9999.0f;
     
     return v < 1.6 ? (1.0f - 1.259f * v + 0.396f * v * v) / (3.535f * v + 2.181f * v * v) : 0.0f;
 }
@@ -98,7 +112,7 @@ float Fresnel(float3 viewDir, float3 halfVector, float2x2 covarianceMatrix)
     float cosPhi = viewDir.x / len;
     float sinPhi = viewDir.z / len;
     
-    float projectedRoughness = sqrt(covarianceMatrix._11 * cosPhi * cosPhi + covarianceMatrix._22 * sinPhi * sinPhi + 2.0f * cosPhi * sinPhi * covarianceMatrix._12) * SQRT_2;
+    float projectedRoughness = sqrt(max(0.0f, covarianceMatrix._11 * cosPhi * cosPhi + covarianceMatrix._22 * sinPhi * sinPhi + 2.0f * cosPhi * sinPhi * covarianceMatrix._12)) * SQRT_2;
 
     float cosTheta = clamp(dot(viewDir, halfVector), 0.0f, 1.0f);
     
@@ -107,7 +121,7 @@ float Fresnel(float3 viewDir, float3 halfVector, float2x2 covarianceMatrix)
 
 float3 SpecularColor(float D, float G, float F, float3 normal, float3 macronormal, float3 viewDir)
 {
-    return dot(normal, macronormal) / max(dot(normal, viewDir), 0.000001f) * m_LightColor * D * G * F / 4.0f;
+    return dot(normal, macronormal) / max(dot(normal, viewDir), 0.01f) * m_LightColor * D * G * F / 4.0f;
 }
 
 float3 EnvironmentalColor(float2x2 covarianceMatrix, float2 totalSlope, float3 viewDir, float3 normal, float3 macronormal)
@@ -156,17 +170,22 @@ float3 EnvironmentalColor(float2x2 covarianceMatrix, float2 totalSlope, float3 v
             
             float3 reflectedViewDir = normalize(reflect(-viewDir, cellNormal));
             
-            float maskingShadowing = MaskingShadowing(viewDir, reflectedViewDir, totalSlope, covarianceMatrix);
+            //float maskingShadowing = MaskingShadowing(viewDir, reflectedViewDir, totalSlope, covarianceMatrix);
             float fresnel = Fresnel(viewDir, cellNormal, covarianceMatrix);
             
             float J = 4.0f * abs(normalDotView) * pow(abs(normalDotMacronormal), 3);
             float alpha = J * A;
             
-            environmentalColor += Wn * maskingShadowing * fresnel * max(0.0f, normalDotView) / max(normalDotMacronormal, 0.000001f) * SkyboxTexture.SampleLevel(LinearSampler, reflectedViewDir, alpha).xyz;
+            float numFacePix = 512.0f;
+            float lod = max(0.0f, 0.5f * log2(alpha * 6.0f * numFacePix * numFacePix / (4.0f * PI)));
+            
+            float3 skyColor = SkyboxTexture.SampleLevel(LinearSampler, reflectedViewDir, lod).xyz;
+            
+            environmentalColor += Wn */* maskingShadowing*/ fresnel * max(0.0f, normalDotView) / max(normalDotMacronormal, 0.1f) * skyColor.xyz;
         }
     }
     
-    environmentalColor = dot(normal, macronormal) / max(dot(normal, viewDir), 0.000001f) * environmentalColor;
+    environmentalColor = environmentalColor * dot(normal, macronormal) / max(dot(normal, viewDir), 0.1f);
     
     return environmentalColor;
 }
@@ -175,19 +194,53 @@ float3 ScatteredLight(float3 lightDir, float3 viewDir, float3 normal, float heig
 {
     height = max(0.0f, height);
     
-    float heightValue = m_K1 * height * pow(max(0.0f, dot(lightDir, -viewDir)), 4);
+    float heightValue = height * pow(max(0.0f, dot(lightDir, -viewDir)), 4);
 
     float sunAngleValue = pow(0.5f - 0.5f * dot(lightDir, normal), 3);
     
     float viewAngleValue = m_K2 * pow(max(0.0f, dot(viewDir, normal)), 2);
     
-    float3 scatteredLight = ((heightValue * sunAngleValue + viewAngleValue) / (1.0f + smithLight)) * m_WaterScatterColor * m_LightColor;
+    float3 scatteredLight = ((m_K1 * heightValue * sunAngleValue + viewAngleValue) / (1.0f + smithLight)) * m_WaterScatterColor * m_LightColor;
 
     scatteredLight += (m_K3 * max(0.0f, dot(lightDir, normal))) * m_WaterScatterColor * m_LightColor;
     
     scatteredLight += (m_K4 * foam) * (m_AirBubblesColor * m_LightColor);
     
     return scatteredLight;
+}
+
+float4 SampleBicubicSlope(float2 uv)
+{
+    float2 invTexSize = 1.0f / m_TextureResolution;
+    
+    float2 pixel = uv * m_TextureResolution - 0.5f;
+    
+    float2 f = frac(pixel);
+    float2 p = floor(pixel);
+    
+    float2 f2 = f * f;
+    float2 f3 = f2 * f;
+    
+    float2 w0 = (1.0f - f) * (1.0f - f) * (1.0f - f) / 6.0f;
+    float2 w1 = (3.0f * f3 - 6.0f * f2 + 4.0f) / 6.0f;
+    float2 w2 = (-3.0f * f3 + 3.0f * f2 + 3.0f * f + 1.0f) / 6.0f;
+    float2 w3 = f3 / 6.0f;
+    
+    float2 weight0 = w0 + w1;
+    float2 weight1 = w2 + w3;
+    
+    float2 tc0 = p - 1.0f + w1 / weight0;
+    float2 tc1 = p + 1.0f + w3 / weight1;
+    
+    tc0 = (tc0 + 0.5f) * invTexSize;
+    tc1 = (tc1 + 0.5f) * invTexSize;
+    
+    float4 s00 = SlopeTextureCascade[CASCADE_COUNT - 1].SampleLevel(LinearSampler, float2(tc0.x, tc0.y), 0.0f);
+    float4 s10 = SlopeTextureCascade[CASCADE_COUNT - 1].SampleLevel(LinearSampler, float2(tc1.x, tc0.y), 0.0f);
+    float4 s01 = SlopeTextureCascade[CASCADE_COUNT - 1].SampleLevel(LinearSampler, float2(tc0.x, tc1.y), 0.0f);
+    float4 s11 = SlopeTextureCascade[CASCADE_COUNT - 1].SampleLevel(LinearSampler, float2(tc1.x, tc1.y), 0.0f);
+    
+    return (s00 * weight0.x + s10 * weight1.x) * weight0.y + (s01 * weight0.x + s11 * weight1.x) * weight1.y;
 }
 
 PSOutput Main(PSInput input)
@@ -200,10 +253,34 @@ PSOutput Main(PSInput input)
     float3 totalSecondOrderMoments = float3(0.0f, 0.0f, 0.0f);
     float totalFoam = 0.0f;
 
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < CASCADE_COUNT; i++)
     {
         float4 slopeSample = SlopeTextureCascade[i].Sample(LinearSampler, input.UVs[i]);
         float4 secondOrderMomentsSample = SecondOrderMomentsCascade[i].Sample(LinearSampler, input.UVs[i]);
+        
+        float2 uvChangeX = ddx(input.UVs[i]);
+        float2 uvChangeY = ddy(input.UVs[i]);
+        
+        float2 texelsCoveredX = uvChangeX * m_TextureResolution;
+        float2 texelsCoveredY = uvChangeY * m_TextureResolution;
+        
+        float mip = 0.5f * log2(max(max(dot(texelsCoveredX, texelsCoveredX), dot(texelsCoveredY, texelsCoveredY)), 0.000001f));
+        
+        if (i == CASCADE_COUNT - 1)
+        {
+            float bicubicLerpValue = saturate(mip / -1.0f);
+
+            if (bicubicLerpValue > 0.0f)
+            {
+                float4 bicubicSlopeSample = SampleBicubicSlope(input.UVs[i]);
+                
+                slopeSample = lerp(slopeSample, bicubicSlopeSample, bicubicLerpValue);
+            }
+        }
+        
+        secondOrderMomentsSample.x = lerp(slopeSample.x * slopeSample.x, secondOrderMomentsSample.x, saturate(0.25f * mip));
+        secondOrderMomentsSample.y = lerp(slopeSample.y * slopeSample.y, secondOrderMomentsSample.y, saturate(0.25f * mip));
+        secondOrderMomentsSample.z = lerp(slopeSample.x * slopeSample.y, secondOrderMomentsSample.z, saturate(0.25f * mip));
     
         totalSecondOrderMoments.x = totalSecondOrderMoments.x + secondOrderMomentsSample.x + 2.0f * totalSlope.x * slopeSample.x;
         totalSecondOrderMoments.y = totalSecondOrderMoments.y + secondOrderMomentsSample.y + 2.0f * totalSlope.y * slopeSample.y;
@@ -213,20 +290,24 @@ PSOutput Main(PSInput input)
         
         totalFoam += slopeSample.a;
     }
+
+    // Calculate final foam
+    float foam = saturate(totalFoam);
     
-    float baseVariance = 0.00f;
+    float3 foamColor = FoamTexture.Sample(LinearSampler, input.UVs[CASCADE_COUNT - 1]);
     
-    float xVariance = totalSecondOrderMoments.x - totalSlope.x * totalSlope.x + baseVariance;
-    float yVariance = totalSecondOrderMoments.y - totalSlope.y * totalSlope.y + baseVariance;
+    foam = saturate((foamColor.r + foamColor.g + foamColor.b) / 3.0f * foam);
+   
+    float baseVariance = 0.002f + foam * m_FoamRoughnessMultiplier;
+    
+    float xVariance = max(totalSecondOrderMoments.x - totalSlope.x * totalSlope.x + baseVariance, 0.00001f);
+    float yVariance = max(totalSecondOrderMoments.y - totalSlope.y * totalSlope.y + baseVariance, 0.00001f);
     float xyCovariance = totalSecondOrderMoments.z - totalSlope.x * totalSlope.y;
     
     float2x2 covarianceMatrix = float2x2(xVariance, xyCovariance, xyCovariance, yVariance);
     
     // Reconstruct the final normal from the combined slopes
     float3 normal = normalize(float3(-totalSlope.x, 1.0f, -totalSlope.y));
-
-    // Calculate final foam
-    float foam = saturate(totalFoam);
     
     //float3 normal = normalize(slopeSample.xyz);
     float3 viewDir = normalize(input.ViewVector);
@@ -248,16 +329,22 @@ PSOutput Main(PSInput input)
     //specularColor = specularColor / (1.0f + specularColor);
     
     float3 environmentalColor = EnvironmentalColor(covarianceMatrix, totalSlope, viewDir, normal, macronormal);
-    //environmentalColor = environmentalColor / (1.0f + environmentalColor);
+    //environmentalColor = environmentalColor / (0.5f + environmentalColor);
     
     float smithLight = Smith(-lightDir, totalSlope, covarianceMatrix);
     float3 scatteredLight = ScatteredLight(-lightDir, viewDir, normal, input.WorldPosition.y, smithLight, foam) * (1.0f - fresnel);
     
-    float3 finalColor = specularColor + environmentalColor + scatteredLight;
+    float3 foamDiffuseColor = max(0.0f, dot(-lightDir, normal)) * foamColor;
+    
+    float3 waterScatterFoamDiffuse = lerp(scatteredLight, foamDiffuseColor, foam);
+    
+    float3 ambientLight = m_AmbientLightIntensity * m_WaterScatterColor * m_LightColor;
+    
+    float3 finalColor = specularColor + environmentalColor + waterScatterFoamDiffuse + ambientLight;
     
     finalColor = finalColor / (1.0f + finalColor);
     
-    //float3 ambientLight = m_AmbientLightIntensity * m_LightColor * 0.15f;
+    //float3 ambientLight = m_AmbientLightIntensity * m_LightColor;
     //float3 diffuseLight = m_LightColor * input.Color * max(0, dot(normal, -lightDir));
     ////float3 specularLight = m_SpecularColor * pow(max(0, dot(halfVector, normal)), 32) * fresnel;
     
@@ -276,7 +363,7 @@ PSOutput Main(PSInput input)
     
     //float foam = saturate(slopeSample.a);
     
-    finalColor = lerp(finalColor, m_FoamColor, foam); //clamp((m_FoamBias - slopeSample.a) / m_FoamBias, 0, 1));
+    //finalColor = lerp(finalColor, m_FoamColor, foam); //clamp((m_FoamBias - slopeSample.a) / m_FoamBias, 0, 1));
     
     //finalColor += m_FogColor * saturate(length(input.WorldPosition - input.EyePos) / m_FogDistance);
     
