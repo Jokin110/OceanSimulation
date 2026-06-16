@@ -214,6 +214,8 @@ bool D3D11Application::Initialize()
     m_d3dViewport.MinDepth = 0.0f;
     m_d3dViewport.MaxDepth = 1.0f;
 
+    m_GPUProfiler.Initialize(m_d3dDevice);
+
     if (!InitializeManagers())
     {
         return false;
@@ -521,6 +523,11 @@ void D3D11Application::Update()
 {
     WindowApplication::Update();
 
+    if (InputManager::GetInstance().GetKeyDown(GLFW_KEY_T))
+    {
+        m_GUIActive = !m_GUIActive;
+    }
+
     ImGui_ImplDX11_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -530,6 +537,7 @@ void D3D11Application::Update()
 
 void D3D11Application::UpdateManagers()
 {
+    InputManager::GetInstance().Update();
     TimeManager::GetInstance().Update();
 	OceanComputeManager::GetInstance().Update();
 	SceneManager::GetInstance().Update();
@@ -656,9 +664,13 @@ void D3D11Application::Render()
     m_d3dDeviceContext->OMSetRenderTargets(1, &m_d3dRenderTargetView, nullptr);
 
     ImGui::Render();
-    ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-    Present(true);
+    if (m_GUIActive)
+    {
+        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+    }
+
+    Present(false);
 }
 
 bool D3D11Application::CompileShader(const wstring& fileName, const string& entryPoint, const string& profile, ID3DBlob*& shaderBlob) const

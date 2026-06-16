@@ -63,9 +63,9 @@ float BeckmannDistribution(float2 halfVectorSlopes, float2 averageSlope, float2x
     return 1.0f / (2.0f * PI * sqrt(determinant)) * exponent;
 }
 
-float NormalDistribution(float p22, float3 halfVector, float3 macronormal)
+float NormalDistribution(float p22, float3 mesonormal, float3 macronormal)
 {
-    float cosTheta = dot(halfVector, macronormal);
+    float cosTheta = dot(mesonormal, macronormal);
     
     if (cosTheta < 0.00001f)
         return 0.0f;
@@ -318,7 +318,7 @@ PSOutput Main(PSInput input)
     
     float p22 = BeckmannDistribution(halfVectorSlopes, totalSlope, covarianceMatrix);
     
-    float D = NormalDistribution(p22, halfVector, macronormal);
+    float D = NormalDistribution(p22, normal, macronormal);
     
     float maskingShadowingValue = MaskingShadowing(viewDir, -lightDir, totalSlope, covarianceMatrix);
     

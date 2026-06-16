@@ -5,6 +5,9 @@
 #include <DirectXMath.h>
 #include "Texture2D.h"
 
+#include <fstream>
+#include <iostream>
+
 using namespace std;
 using namespace DirectX;
 
@@ -77,6 +80,60 @@ struct OceanSimulationCascadeSettings
 	float m_MeshVertexSeparation = 10.0f;
 	float m_FrequencyFilterMultiplier = 0.5f;
 	float m_CascadeAmplitudes[CASCADE_COUNT] = { 1.0f, 2.5f, 8.0f, 25.0f }; // Amplitude scaling for each cascade
+};
+
+struct PerformanceMetrics
+{
+	float m_TotalSimulationTime = 0.0f;
+	int m_TotalFrames = 0;
+	float m_MinFrameSimulationDuration = 9999999.0f;
+	float m_MaxFrameSimulationDuration = -9999999.0f;
+
+	void AddEntry(float deltaTime)
+	{
+		if (deltaTime > 0)
+		{
+			m_TotalSimulationTime += deltaTime;
+			m_TotalFrames++;
+			m_MinFrameSimulationDuration = min(m_MinFrameSimulationDuration, deltaTime);
+			m_MaxFrameSimulationDuration = max(m_MaxFrameSimulationDuration, deltaTime);
+		}
+	}
+
+	float GetAverage()
+	{
+		return m_TotalFrames > 0 ? m_TotalSimulationTime / m_TotalFrames : 0.0f;
+	}
+
+	void SaveToFile(const std::string& filepath)
+	{
+		ofstream outFile(filepath);
+
+		if (outFile.is_open())
+		{
+			outFile << "--- Performance Metrics ---\n";
+			outFile << "Total Simulation Time: " << m_TotalSimulationTime << " ms\n";
+			outFile << "Total Frames: " << m_TotalFrames << "\n";
+
+			// Only print Min/Max if we actually recorded frames to avoid printing the default 9999999.0f
+			if (m_TotalFrames > 0) {
+				outFile << "Min Frame Duration: " << m_MinFrameSimulationDuration << " ms\n";
+				outFile << "Max Frame Duration: " << m_MaxFrameSimulationDuration << " ms\n";
+			}
+			else {
+				outFile << "Min Frame Duration: N/A\n";
+				outFile << "Max Frame Duration: N/A\n";
+			}
+
+			outFile << "Average Frame Duration: " << GetAverage() << " ms\n";
+
+			outFile.close(); // Optional, destructor handles this, but good practice
+		}
+		else
+		{
+			cout << "Failed to open file for writing: " << filepath << "\n";
+		}
+	}
 };
 
 class OceanComputeManager
@@ -203,5 +260,8 @@ private:
 	ID3D11Buffer* m_d3dTimeEvolutionBuffer = nullptr;
 	DisplacementAndSlopeData m_DisplacementAndSlopeBufferData;
 	ID3D11Buffer* m_d3dDisplacementAndSlopeBuffer = nullptr;
+
+	PerformanceMetrics m_OverallPerformanceMetrics;
+	PerformanceMetrics m_FFTSimulationMetrics;
 };
 

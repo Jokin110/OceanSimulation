@@ -18,6 +18,7 @@
 #include "backends/imgui_impl_dx11.h"
 
 #include "WindowApplication.h"
+#include "GpuProfiler.h"
 
 #include <vector>
 
@@ -54,6 +55,10 @@ public:
 	ID3D11RenderTargetView* GetRenderTargetView() const { return m_d3dRenderTargetView; }
 	ID3D11ShaderResourceView* GetSceneColorSRV() const { return m_d3dSceneColorSRV; }
 	ID3D11ShaderResourceView* GetDepthStencilSRV() const { return m_d3dDepthStencilSRV; }
+
+	void BeginProfiling() { m_GPUProfiler.Begin(m_d3dDeviceContext); }
+	void EndProfiling() { m_GPUProfiler.End(m_d3dDeviceContext); }
+	float GetElapsedMsAndAdvanceFrame() { return m_GPUProfiler.GetElapsedMsAndAdvanceFrame(m_d3dDeviceContext); }
 
 protected:
 	bool Initialize() override;
@@ -105,6 +110,10 @@ private:
 	D3D11_VIEWPORT m_d3dViewport = { 0 };
 
 	ID3D11Debug* m_d3dDebug = nullptr;
+
+	GpuProfiler m_GPUProfiler;
+
+	bool m_GUIActive = true;
 
 	template<typename T>
 	inline void SafeRelease(T& ptr)

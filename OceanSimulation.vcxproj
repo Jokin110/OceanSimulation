@@ -23,6 +23,7 @@
     <ClInclude Include="include\DefaultPostprocessEffect.h" />
     <ClInclude Include="include\FFTManager.h" />
     <ClInclude Include="include\FogPostprocessEffect.h" />
+    <ClInclude Include="include\GpuProfiler.h" />
     <ClInclude Include="include\OceanComputeManager.h" />
     <ClInclude Include="include\InputManager.h" />
     <ClInclude Include="include\Object.h" />

@@ -95,7 +95,7 @@ void CameraManager::Update()
         m_CameraPosition.y -= m_Speed * TimeManager::GetInstance().GetUnscaledDeltaTime();
 	}
 
-    if (InputManager::GetInstance().GetKey(GLFW_KEY_P))
+    if (InputManager::GetInstance().GetKeyDown(GLFW_KEY_P))
     {
         TimeManager::GetInstance().SetTimeScale(1.0f - TimeManager::GetInstance().GetTimeScale());
     }

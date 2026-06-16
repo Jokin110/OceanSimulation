@@ -1,0 +1,6 @@
+--- Performance Metrics ---
+Total Simulation Time: 36820.3 ms
+Total Frames: 1121
+Min Frame Duration: 23.3081 ms
+Max Frame Duration: 47.3003 ms
+Average Frame Duration: 32.8459 ms

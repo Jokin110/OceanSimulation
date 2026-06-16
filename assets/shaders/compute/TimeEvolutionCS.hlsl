@@ -51,9 +51,8 @@ void Main(uint3 dispatchThreadID : SV_DispatchThreadID)
     uint x = dispatchThreadID.x;
     uint y = dispatchThreadID.y;
     
-    // Convert the thread ID to a wave vector (kx, ky) in the frequency domain. The wave vector components are centered around zero, so we need to shift them accordingly.
-    float nx = x - m_OceanTextureSize / 2.0f; // (x < m_OceanTextureSize / 2.0f) ? x : (float) x - m_OceanTextureSize;
-    float ny = y - m_OceanTextureSize / 2.0f; //(y < m_OceanTextureSize / 2.0f) ? y : (float) y - m_OceanTextureSize;
+    float nx = x - m_OceanTextureSize / 2.0f; 
+    float ny = y - m_OceanTextureSize / 2.0f; 
 
     float kx = nx * (2.0f * PI / m_PatchSize);
     float ky = ny * (2.0f * PI / m_PatchSize);

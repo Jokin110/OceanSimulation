@@ -6,6 +6,7 @@
 #include "TimeManager.h"
 #include "FFTManager.h"
 #include "SceneManager.h"
+#include "InputManager.h"
 
 #define PI 3.14159265358979323846f
 
@@ -110,14 +111,41 @@ void OceanComputeManager::Start()
     FFTManager::GetInstance().PrecomputeTwiddleFactors();
 
     GenerateInitialSpectrum(true);
+
+    m_OverallPerformanceMetrics = PerformanceMetrics();
+    m_FFTSimulationMetrics = PerformanceMetrics();
 }
 
 void OceanComputeManager::Update()
 {
+    m_OverallPerformanceMetrics.AddEntry(TimeManager::GetInstance().GetDeltaTime() * 1000.0f);
+
 	UpdateUI();
+
+#if _DEBUG
+    D3D11Application::GetInstance().BeginProfiling();
+#endif
+
     UpdateTimeEvolutionTextures();
 	UpdateFFTTextures();
 	GenerateDisplacementAndSlopeFinalTextures();
+
+#if _DEBUG
+    D3D11Application::GetInstance().EndProfiling();
+
+    double elapsedMs = D3D11Application::GetInstance().GetElapsedMsAndAdvanceFrame();
+
+    m_FFTSimulationMetrics.AddEntry(elapsedMs);
+
+    if (InputManager::GetInstance().GetKeyDown(GLFW_KEY_O))
+    {
+        string outputFilePath = (string)"PerformanceMetrics/OverallPerformanceMetrics" + to_string(m_OceanSimulationCascadeSettings.m_OceanTextureSize) + "x" + to_string(m_OceanSimulationCascadeSettings.m_OceanTextureSize) + ".txt";
+        string outputFilePathFFT = (string)"PerformanceMetrics/FFTSimulationPerformanceMetrics" + to_string(m_OceanSimulationCascadeSettings.m_OceanTextureSize) + "x" + to_string(m_OceanSimulationCascadeSettings.m_OceanTextureSize) + ".txt";
+
+        m_OverallPerformanceMetrics.SaveToFile(outputFilePath);
+        m_FFTSimulationMetrics.SaveToFile(outputFilePathFFT);
+    }
+#endif
 }
 
 void OceanComputeManager::InitializeOceanSimulationSettings(bool initial)
@@ -170,6 +198,9 @@ void OceanComputeManager::InitializeOceanSimulationSettings(bool initial)
 
 void OceanComputeManager::GenerateInitialSpectrum(bool initial)
 {
+    m_OverallPerformanceMetrics = PerformanceMetrics();
+    m_FFTSimulationMetrics = PerformanceMetrics();
+
     RecalculateFrequencyFilters();
 
     ID3D11DeviceContext* context = D3D11Application::GetInstance().GetDeviceContext();
@@ -522,12 +553,12 @@ void OceanComputeManager::RecalculateFrequencyFilters()
     m_LowPassFilters[0] = 0.0f;
     m_HighPassFilters[CASCADE_COUNT - 1] = 9999999999999.0f;
 
-    for (int i = 1; i < CASCADE_COUNT; i++)
+    for (int i = 0; i < CASCADE_COUNT - 1; i++)
     {
-        float filter = m_OceanSimulationCascadeSettings.m_FrequencyFilterMultiplier * PI * m_OceanSimulationCascadeSettings.m_OceanTextureSize / m_OceanSimulationCascadeSettings.m_OceanPatchSize[i - 1];
+        float filter = m_OceanSimulationCascadeSettings.m_FrequencyFilterMultiplier * PI * m_OceanSimulationCascadeSettings.m_OceanTextureSize / m_OceanSimulationCascadeSettings.m_OceanPatchSize[i];
 
-        m_LowPassFilters[i] = filter;
-        m_HighPassFilters[i - 1] = filter;
+        m_LowPassFilters[i + 1] = filter;
+        m_HighPassFilters[i] = filter;
     }
 }
 

@@ -60,6 +60,8 @@ DSOutput Main(PatchTess patchTess, float2 uv : SV_DomainLocation, const OutputPa
     
     float3 flatWorldPos = mul(float4(localPos, 1.0), m_WorldMatrix).xyz;
     
+    float3 displacement = float3(0.0f, 0.0f, 0.0f);
+    
     // Sample the FFT texture you generated in the Compute Shader
     for (int i = 0; i < 4; i++)
     {
@@ -67,14 +69,10 @@ DSOutput Main(PatchTess patchTess, float2 uv : SV_DomainLocation, const OutputPa
         
         float4 displacementData = DisplacementTextureCascade[i].SampleLevel(LinearSampler, output.UVs[i], 0);
     
-        localPos += displacementData.xyz;
+        displacement += displacementData.xyz;
     }
     
-    float3 originalWorldPos = mul(float4(0.0f, 0.0f, 0.0f, 1.0f), m_WorldMatrix).xyz;
-    
-    float distance = length(originalWorldPos - m_CameraPosition);
-    
-    localPos *= saturate((1500.0f - distance) / 500.0f);
+    localPos += displacement;
     
     float3 worldPosition = mul(float4(localPos, 1.0), m_WorldMatrix).xyz;
     
