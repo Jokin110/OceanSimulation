@@ -30,6 +30,7 @@ public:
     static bool Initialize();
     void Start();
     void Update();
+    void UpdateUI();
 
     bool RegenerateMeshes();
 
@@ -56,5 +57,19 @@ private:
     SkyBox* m_SkyBox = nullptr;
 
     FogPostprocessEffect* m_FogPostProcessEffect = nullptr;
+
+    string m_SceneSettingsSavePath = "Scenes";
+
+    vector<string> m_SceneFolders;      // You will populate this by scanning m_SceneSettingsSavePath
+    int m_SelectedSceneIndex = 0;       // Keeps track of the currently selected dropdown item
+    char m_SceneNameInput[256] = "";    // Buffer for the text input field
+
+    void SaveSettings(string parentPath);
+    void LoadSettings(string parentPath);
+
+    void LoadSceneNames();
+
+    void SaveSceneSettings();
+    void LoadSceneSettings();
 };
 

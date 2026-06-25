@@ -1,8 +1,10 @@
 #pragma once
 
 #include <DirectXMath.h>
+#include <string>
 
 using namespace DirectX;
+using namespace std;
 
 struct CameraSettings
 {
@@ -36,6 +38,7 @@ public:
     static bool Initialize();
     void Start();
     void Update();
+    void UpdateUI();
 
     XMMATRIX GetViewMatrix() { return m_ViewMatrix; }
     XMMATRIX GetProjectionMatrix() { return m_ProjectionMatrix; }
@@ -44,10 +47,11 @@ public:
 	float GetNearPlaneDistance() const { return m_CameraSettings.m_NearClipPlaneDistance; }
 	float GetFarPlaneDistance() const { return m_CameraSettings.m_FarClipPlaneDistance; }
 
+    void SaveSettings(string parentPath = "");
+    void LoadSettings(string parentPath = "");
+
 private:
     static CameraManager* m_Instance;
-
-    void UpdateUI();
 
     CameraSettings m_CameraSettings;
 

@@ -44,6 +44,7 @@ public:
     bool InitializeEffects();
 	void Start();
     void Update();
+    void UpdateUI();
     void Render();
 
     bool OnResize();

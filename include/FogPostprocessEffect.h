@@ -31,8 +31,12 @@ public:
 	bool Initialize() override;
 	void Start() override;
 	void Update() override;
+	void UpdateUI() override;
 	void Render() override;
 	ID3D11ShaderResourceView* const* GetPixelShaderSRVs() override;
+
+	void SaveSettings(string parentPath = "");
+	void LoadSettings(string parentPath = "");
 
 protected:
 	void ReleaseResources() override;

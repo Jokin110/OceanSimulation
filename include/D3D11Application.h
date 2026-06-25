@@ -13,10 +13,6 @@
 #pragma comment(lib, "winmm.lib")
 #pragma comment(lib, "dxguid.lib")
 
-#include "imgui.h"
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_dx11.h"
-
 #include "WindowApplication.h"
 #include "GpuProfiler.h"
 
@@ -60,6 +56,8 @@ public:
 	void EndProfiling() { m_GPUProfiler.End(m_d3dDeviceContext); }
 	float GetElapsedMsAndAdvanceFrame() { return m_GPUProfiler.GetElapsedMsAndAdvanceFrame(m_d3dDeviceContext); }
 
+	void UpdateUI();
+
 protected:
 	bool Initialize() override;
     bool Load() override;
@@ -82,9 +80,6 @@ private:
 
 	bool InitializeManagers();
 	void UpdateManagers();
-
-	bool InitializeImGui();
-	void CleanupImGui();
 
 	ID3D11Device* m_d3dDevice = nullptr;
 	ID3D11DeviceContext* m_d3dDeviceContext = nullptr;
@@ -112,8 +107,6 @@ private:
 	ID3D11Debug* m_d3dDebug = nullptr;
 
 	GpuProfiler m_GPUProfiler;
-
-	bool m_GUIActive = true;
 
 	template<typename T>
 	inline void SafeRelease(T& ptr)

@@ -114,11 +114,7 @@ bool Texture2D::Initialize()
 
         for (int i = 0; i < m_TextureCount; i++)
         {
-#if _DEBUG
 			string path = m_TexturePath[i];
-#else
-			string path = "../../" + m_TexturePath[i];
-#endif
 
             // Force the image to load with 4 channels (RGBA) so it aligns perfectly with DirectX formats
             unsigned char* rawData = stbi_load(path.c_str(), &imgWidth, &imgHeight, &imgChannels, 4);
@@ -195,11 +191,8 @@ bool Texture2D::Initialize()
     {
         for (int i = 0; i < m_TextureCount; i++)
         {
-#if _DEBUG
             string path = m_TexturePath[i];
-#else
-            string path = "../../" + m_TexturePath[i];
-#endif
+
 			wstring wPath(path.begin(), path.end());
 
             if (FAILED(CreateDDSTextureFromFile(

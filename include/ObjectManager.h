@@ -34,7 +34,8 @@ public:
 	bool InitializeObjects();
     void Start();
     void Update();
-
+    void UpdateUI();
+     
 private:
     static ObjectManager* m_Instance;
 

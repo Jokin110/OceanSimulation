@@ -54,14 +54,8 @@ bool PostprocessEffectManager::Initialize()
 
 		m_Instance->GenerateMesh();
 
-#if _DEBUG
-		wstring pathPrefix = L"";
-#else
-		wstring pathPrefix = L"../../";
-#endif
-
 		ID3DBlob* vertexShaderBlob = nullptr;
-		m_Instance->m_d3dVertexShader = D3D11Application::GetInstance().CreateVertexShader(pathPrefix + m_Instance->m_VertexShaderFile, vertexShaderBlob);
+		m_Instance->m_d3dVertexShader = D3D11Application::GetInstance().CreateVertexShader(m_Instance->m_VertexShaderFile, vertexShaderBlob);
 
 		if (m_Instance->m_d3dVertexShader == nullptr)
 		{
@@ -233,6 +227,14 @@ void PostprocessEffectManager::Update()
 	for (int i = 0; i < m_PostprocessEffects.size(); i++)
 	{
 		m_PostprocessEffects[i]->Update();
+	}
+}
+
+void PostprocessEffectManager::UpdateUI()
+{
+	for (int i = 0; i < m_PostprocessEffects.size(); i++)
+	{
+		m_PostprocessEffects[i]->UpdateUI();
 	}
 }
 

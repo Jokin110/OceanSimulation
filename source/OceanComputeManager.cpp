@@ -110,7 +110,7 @@ void OceanComputeManager::Start()
 {
     FFTManager::GetInstance().PrecomputeTwiddleFactors();
 
-    GenerateInitialSpectrum(true);
+    GenerateInitialSpectrum(true, "");
 
     m_OverallPerformanceMetrics = PerformanceMetrics();
     m_FFTSimulationMetrics = PerformanceMetrics();
@@ -119,8 +119,6 @@ void OceanComputeManager::Start()
 void OceanComputeManager::Update()
 {
     m_OverallPerformanceMetrics.AddEntry(TimeManager::GetInstance().GetDeltaTime() * 1000.0f);
-
-	UpdateUI();
 
 #if _DEBUG
     D3D11Application::GetInstance().BeginProfiling();
@@ -148,7 +146,16 @@ void OceanComputeManager::Update()
 #endif
 }
 
-void OceanComputeManager::InitializeOceanSimulationSettings(bool initial)
+void OceanComputeManager::UpdateUI()
+{
+    UpdateSimulationSettingsUI();
+
+    UpdateGraphicSettingsUI();
+
+    UpdateCascadeSettingsUI();
+}
+
+void OceanComputeManager::InitializeOceanSimulationSettings(bool initial, string parentPath)
 {
     if (initial)
     {
@@ -164,7 +171,7 @@ void OceanComputeManager::InitializeOceanSimulationSettings(bool initial)
         m_OceanSimulationSettingsBufferData.m_PeakEnhancementFactor = 3.3f;
         m_OceanSimulationSettingsBufferData.m_Swell = 0.0f;
 
-        std::ifstream inFile("OceanSimulationSettings.bin", std::ios::binary);
+        std::ifstream inFile(parentPath + "OceanSimulationSettings.bin", std::ios::binary);
 
         if (inFile.is_open())
         {
@@ -196,7 +203,7 @@ void OceanComputeManager::InitializeOceanSimulationSettings(bool initial)
     }
 }
 
-void OceanComputeManager::GenerateInitialSpectrum(bool initial)
+void OceanComputeManager::GenerateInitialSpectrum(bool initial, string parentPath)
 {
     m_OverallPerformanceMetrics = PerformanceMetrics();
     m_FFTSimulationMetrics = PerformanceMetrics();
@@ -207,7 +214,7 @@ void OceanComputeManager::GenerateInitialSpectrum(bool initial)
 
     context->CSSetShader(m_InitialSpectrumComputeShader, nullptr, 0);
 
-    InitializeOceanSimulationSettings(initial);
+    InitializeOceanSimulationSettings(initial, parentPath);
 
     m_OceanSimulationSettingsBufferData.m_OceanTextureSize = m_OceanSimulationCascadeSettings.m_OceanTextureSize;
 
@@ -326,15 +333,6 @@ void OceanComputeManager::GenerateDisplacementAndSlopeFinalTextures()
     }
 }
 
-void OceanComputeManager::UpdateUI()
-{
-    UpdateSimulationSettingsUI();
-
-    UpdateGraphicSettingsUI();
-
-    UpdateCascadeSettingsUI();
-}
-
 void OceanComputeManager::UpdateSimulationSettingsUI()
 {
     ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysAutoResize;
@@ -353,18 +351,27 @@ void OceanComputeManager::UpdateSimulationSettingsUI()
 
     if (ImGui::Button("Apply Changes"))
     {
-        GenerateInitialSpectrum(false);
+        GenerateInitialSpectrum(false, "");
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button("Save Settings"))
     {
+        GenerateInitialSpectrum(false, "");
+
         std::ofstream outFile("OceanSimulationSettings.bin", std::ios::binary);
         if (outFile.is_open())
         {
             outFile.write(reinterpret_cast<const char*>(&m_OceanSimulationSettingsBufferData), sizeof(m_OceanSimulationSettingsBufferData));
             outFile.close();
+        }
+
+        std::ofstream chopinessFile("ChopinessSettings.bin", std::ios::binary);
+        if (chopinessFile.is_open())
+        {
+            chopinessFile.write(reinterpret_cast<const char*>(&m_DisplacementAndSlopeBufferData.m_ChoppinessFactor), sizeof(m_DisplacementAndSlopeBufferData.m_ChoppinessFactor));
+            chopinessFile.close();
         }
     }
 
@@ -372,7 +379,14 @@ void OceanComputeManager::UpdateSimulationSettingsUI()
 
     if (ImGui::Button("Load Settings"))
     {
-        GenerateInitialSpectrum(true);
+        GenerateInitialSpectrum(true, "");
+
+        std::ifstream chopinessFile("ChopinessSettings.bin", std::ios::binary);
+        if (chopinessFile.is_open())
+        {
+            chopinessFile.read(reinterpret_cast<char*>(&m_DisplacementAndSlopeBufferData.m_ChoppinessFactor), sizeof(m_DisplacementAndSlopeBufferData.m_ChoppinessFactor));
+            chopinessFile.close();
+        }
     }
 
     ImGui::End();
@@ -541,7 +555,7 @@ bool OceanComputeManager::ReinitializeTexturesMeshesAndSpectrum()
 
     if (!FFTManager::GetInstance().ResizeTextures(m_OceanSimulationCascadeSettings.m_OceanTextureSize)) return false;
 
-    GenerateInitialSpectrum(false);
+    GenerateInitialSpectrum(false, "");
 
     if (!SceneManager::GetInstance().RegenerateMeshes()) return false;
 
@@ -707,33 +721,21 @@ bool OceanComputeManager::CreateBuffers()
 
 bool OceanComputeManager::CreateComputeShaders()
 {
-#if _DEBUG
     m_InitialSpectrumComputeShader = D3D11Application::GetInstance().CreateComputeShader(m_InitialSpectrumComputeShaderFile);
-#else
-    m_InitialSpectrumComputeShader = D3D11Application::GetInstance().CreateComputeShader(L"../../" + m_InitialSpectrumComputeShaderFile);
-#endif
 
     if (m_InitialSpectrumComputeShader == nullptr)
     {
         return false;
     }
 
-#if _DEBUG
     m_TimeEvolutionComputeShader = D3D11Application::GetInstance().CreateComputeShader(m_TimeEvolutionComputeShaderFile);
-#else
-    m_TimeEvolutionComputeShader = D3D11Application::GetInstance().CreateComputeShader(L"../../" + m_TimeEvolutionComputeShaderFile);
-#endif
 
     if (m_TimeEvolutionComputeShader == nullptr)
     {
         return false;
     }
 
-#if _DEBUG
     m_DisplacementAndSlopeComputeShader = D3D11Application::GetInstance().CreateComputeShader(m_DisplacementAndSlopeComputeShaderFile);
-#else
-    m_DisplacementAndSlopeComputeShader = D3D11Application::GetInstance().CreateComputeShader(L"../../" + m_DisplacementAndSlopeComputeShaderFile);
-#endif
 
     if (m_DisplacementAndSlopeComputeShader == nullptr)
     {
@@ -772,4 +774,79 @@ void OceanComputeManager::DeleteTextureObject(Texture2D* &texture)
         delete texture;
         texture = nullptr;
     }
+}
+
+void OceanComputeManager::SaveSettings(string parentPath)
+{
+    GenerateInitialSpectrum(false, "");
+
+    std::ofstream simFile(parentPath + "OceanSimulationSettings.bin", std::ios::binary);
+    if (simFile.is_open())
+    {
+        simFile.write(reinterpret_cast<const char*>(&m_OceanSimulationSettingsBufferData), sizeof(m_OceanSimulationSettingsBufferData));
+        simFile.close();
+    }
+
+    std::ofstream chopinessFile(parentPath + "ChopinessSettings.bin", std::ios::binary);
+    if (chopinessFile.is_open())
+    {
+        chopinessFile.write(reinterpret_cast<const char*>(&m_DisplacementAndSlopeBufferData.m_ChoppinessFactor), sizeof(m_DisplacementAndSlopeBufferData.m_ChoppinessFactor));
+        chopinessFile.close();
+    }
+
+    std::ofstream tessFile(parentPath + "TessellationSettings.bin", std::ios::binary);
+    if (tessFile.is_open())
+    {
+        tessFile.write(reinterpret_cast<const char*>(&m_TessellationSettingsData), sizeof(TessellationSettingsData));
+        tessFile.close();
+    }
+
+    ApplyCascadeSettings(true);
+
+    std::ofstream cascadeFile(parentPath + "CascadeSettings.bin", std::ios::binary);
+    if (cascadeFile.is_open())
+    {
+        cascadeFile.write(reinterpret_cast<const char*>(&m_OceanSimulationCascadeSettings), sizeof(OceanSimulationCascadeSettings));
+        cascadeFile.close();
+    }
+
+    if (!ReinitializeTexturesMeshesAndSpectrum())
+    {
+        cout << "Couldn't reinitialize textures, meshes and spectrum!";
+    }
+}
+
+void OceanComputeManager::LoadSettings(string parentPath)
+{
+    GenerateInitialSpectrum(true, parentPath);
+
+    std::ifstream chopinessFile(parentPath + "ChopinessSettings.bin", std::ios::binary);
+    if (chopinessFile.is_open())
+    {
+        chopinessFile.read(reinterpret_cast<char*>(&m_DisplacementAndSlopeBufferData.m_ChoppinessFactor), sizeof(m_DisplacementAndSlopeBufferData.m_ChoppinessFactor));
+        chopinessFile.close();
+    }
+
+    std::ifstream tessFile(parentPath + "TessellationSettings.bin", std::ios::binary);
+    if (tessFile.is_open())
+    {
+        tessFile.read(reinterpret_cast<char*>(&m_TessellationSettingsData), sizeof(TessellationSettingsData));
+        tessFile.close();
+    }
+
+    std::ifstream cascadeFile(parentPath + "CascadeSettings.bin", std::ios::binary);
+    if (cascadeFile.is_open())
+    {
+        cascadeFile.read(reinterpret_cast<char*>(&m_OceanSimulationCascadeSettings), sizeof(OceanSimulationCascadeSettings));
+        cascadeFile.close();
+
+        if (!ReinitializeTexturesMeshesAndSpectrum())
+        {
+            cout << "Couldn't reinitialize textures, meshes and spectrum!";
+        }
+    }
+
+    ApplyCascadeSettings(false);
+
+
 }

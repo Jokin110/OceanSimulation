@@ -72,6 +72,12 @@ struct PixelShaderConstantBufferData
 
 	float m_FoamRoughnessMultiplier;
 	int m_TextureResolution;
+
+	float m_Cascade0FoamWeight;
+	float m_Cascade1FoamWeight;
+	float m_Cascade2FoamWeight;
+	float m_Cascade3FoamWeight;
+
 	XMFLOAT2 m_Padding;
 };
 
@@ -84,6 +90,7 @@ public:
 	bool Initialize() override;
 	void Start() override;
 	void Update() override;
+	void UpdateUI() override;
 
 	ID3D11ShaderResourceView* const* GetDomainShaderSRVs() override;
 	ID3D11ShaderResourceView* const* GetPixelShaderSRVs() override;

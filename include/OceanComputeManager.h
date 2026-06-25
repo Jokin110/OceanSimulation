@@ -159,6 +159,7 @@ public:
     static bool Initialize();
     void Start();
     void Update();
+	void UpdateUI();
 
 	int GetOceanTextureSize() const { return m_OceanSimulationCascadeSettings.m_OceanTextureSize; }
 	float GetOceanMeshPatchSize() const { return m_OceanSimulationCascadeSettings.m_OceanMeshPatchSize; }
@@ -172,15 +173,17 @@ public:
 
 	TessellationSettingsData GetTessellationSettingsData() { return m_TessellationSettingsData; }
 
-private:
-	void InitializeOceanSimulationSettings(bool initial);
+	void SaveSettings(string parentPath);
+	void LoadSettings(string parentPath);
 
-	void GenerateInitialSpectrum(bool initial);
+private:
+	void InitializeOceanSimulationSettings(bool initial, string parentPath);
+
+	void GenerateInitialSpectrum(bool initial, string parentPath);
 	void UpdateTimeEvolutionTextures();
 	void UpdateFFTTextures();
 	void GenerateDisplacementAndSlopeFinalTextures();
 
-	void UpdateUI();
 	void UpdateSimulationSettingsUI();
 	void UpdateGraphicSettingsUI();
 	void UpdateCascadeSettingsUI();

@@ -18,6 +18,7 @@ public:
 	virtual bool Initialize() = 0;
 	virtual void Start() = 0;
 	virtual void Update() = 0;
+	virtual void UpdateUI() = 0;
 	virtual void Render() = 0;
 
 	virtual void ReleaseResources() = 0;
@@ -44,6 +45,7 @@ public:
 	virtual bool Initialize();
 	virtual void Start();
 	virtual void Update();
+	virtual void UpdateUI();
 	virtual void Render();
 
 	ID3D11PixelShader*& GetPixelShader() { return m_d3dPixelShader; }
@@ -130,13 +132,7 @@ void PostprocessEffect<PixelShaderConstantBufferData>::ReleaseResources()
 template<typename PixelShaderConstantBufferData>
 bool PostprocessEffect<PixelShaderConstantBufferData>::Initialize()
 {
-#if _DEBUG
-	wstring pathPrefix = L"";
-#else
-	wstring pathPrefix = L"../../";
-#endif
-
-	m_d3dPixelShader = D3D11Application::GetInstance().CreatePixelShader(pathPrefix + m_PixelShaderFile);
+	m_d3dPixelShader = D3D11Application::GetInstance().CreatePixelShader(m_PixelShaderFile);
 
 	if (m_d3dPixelShader == nullptr)
 	{
@@ -192,6 +188,12 @@ void PostprocessEffect<PixelShaderConstantBufferData>::Start()
 
 template<typename PixelShaderConstantBufferData>
 void PostprocessEffect<PixelShaderConstantBufferData>::Update()
+{
+
+}
+
+template<typename PixelShaderConstantBufferData>
+void PostprocessEffect<PixelShaderConstantBufferData>::UpdateUI()
 {
 
 }

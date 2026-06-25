@@ -5,7 +5,7 @@ InputManager* InputManager::m_Instance = nullptr;
 
 InputManager::InputManager()
 {
-
+	
 }
 
 InputManager::~InputManager()
@@ -37,21 +37,45 @@ void InputManager::Update()
 
 		m_currentKeys[i] = glfwGetKey(window, i) == GLFW_PRESS;
 	}
+
+	ImGuiIO& io = ImGui::GetIO();
+
+	m_EnableInput = io.WantCaptureKeyboard;
+}
+
+void InputManager::UpdateUI()
+{
+
 }
 
 bool InputManager::GetKeyDown(int key)
 {
+	if (m_EnableInput)
+	{
+		return false;
+	}
+
 	if (key < 0 || key > GLFW_KEY_LAST) return false;
 	return m_currentKeys[key] && !m_previousKeys[key];
 }
 
 bool InputManager::GetKey(int key)
 {
-	return glfwGetKey(D3D11Application::GetInstance().GetWindow(), key) == GLFW_PRESS;
+	if (m_EnableInput)
+	{
+		return false;
+	}
+
+	if (key < 0 || key > GLFW_KEY_LAST) return false;
+	return m_currentKeys[key];
 }
 
 bool InputManager::GetKeyUp(int key)
 {
+	if (m_EnableInput)
+	{
+		return false;
+	}
 	if (key < 0 || key > GLFW_KEY_LAST) return false;
 	return !m_currentKeys[key] && m_previousKeys[key];
 }

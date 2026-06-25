@@ -402,3 +402,5 @@ FodyWeavers.xsd
 imgui.ini
 *imgui.ini
 *Settings.bin
+
+*.rdc

@@ -58,12 +58,7 @@ bool FogPostprocessEffect::Initialize()
 	m_PixelShaderConstantBufferData.m_LightScatteringBias = 0.4f;
 	m_PixelShaderConstantBufferData.m_FogFactorExponent = 1.0f;
 
-	std::ifstream inFile("FogSettings.bin", std::ios::binary);
-	if (inFile.is_open())
-	{
-		inFile.read(reinterpret_cast<char*>(&m_PixelShaderConstantBufferData), sizeof(m_PixelShaderConstantBufferData));
-		inFile.close();
-	}
+	LoadSettings();
 
 	return true;
 }
@@ -82,11 +77,16 @@ void FogPostprocessEffect::Start()
 
 void FogPostprocessEffect::Update()
 {
+	
+}
+
+void FogPostprocessEffect::UpdateUI()
+{
 	ImGuiWindowFlags windowFlags = ImGuiWindowFlags_AlwaysAutoResize;
 	ImGui::Begin("Fog Settings", nullptr, windowFlags);
 
 	ImGui::ColorEdit3("Fog Color", (float*)&m_PixelShaderConstantBufferData.m_FogColor);
-	ImGui::SliderFloat("Fog Density", &m_PixelShaderConstantBufferData.m_FogDensity, 0.0f, 0.1f, "%.4f");
+	ImGui::SliderFloat("Fog Density", &m_PixelShaderConstantBufferData.m_FogDensity, 0.0f, 0.01f, "%.4f");
 	ImGui::SliderFloat("Height Falloff", &m_PixelShaderConstantBufferData.m_HeightFalloff, 0.0f, 0.1f, "%.4f");
 	ImGui::SliderFloat("Light Scattering Intensity", &m_PixelShaderConstantBufferData.m_LightScatteringIntensity, 0.0f, 50.0f, "%.4f");
 	ImGui::SliderFloat("Light Scattering Bias", &m_PixelShaderConstantBufferData.m_LightScatteringBias, 0.0f, 1.0f, "%.4f");
@@ -94,24 +94,14 @@ void FogPostprocessEffect::Update()
 
 	if (ImGui::Button("Save Settings"))
 	{
-		std::ofstream outFile("FogSettings.bin", std::ios::binary);
-		if (outFile.is_open())
-		{
-			outFile.write(reinterpret_cast<const char*>(&m_PixelShaderConstantBufferData), sizeof(m_PixelShaderConstantBufferData));
-			outFile.close();
-		}
+		SaveSettings();
 	}
 
 	ImGui::SameLine();
 
 	if (ImGui::Button("Load Settings"))
 	{
-		std::ifstream inFile("FogSettings.bin", std::ios::binary);
-		if (inFile.is_open())
-		{
-			inFile.read(reinterpret_cast<char*>(&m_PixelShaderConstantBufferData), sizeof(m_PixelShaderConstantBufferData));
-			inFile.close();
-		}
+		LoadSettings();
 	}
 
 	ImGui::End();
@@ -133,4 +123,24 @@ ID3D11ShaderResourceView* const* FogPostprocessEffect::GetPixelShaderSRVs()
     m_PixelShaderSRV[0] = D3D11Application::GetInstance().GetDepthStencilSRV();
 
     return m_PixelShaderSRV;
+}
+
+void FogPostprocessEffect::SaveSettings(string parentPath)
+{
+	std::ofstream outFile(parentPath + "FogSettings.bin", std::ios::binary);
+	if (outFile.is_open())
+	{
+		outFile.write(reinterpret_cast<const char*>(&m_PixelShaderConstantBufferData), sizeof(m_PixelShaderConstantBufferData));
+		outFile.close();
+	}
+}
+
+void FogPostprocessEffect::LoadSettings(string parentPath)
+{
+	std::ifstream inFile(parentPath + "FogSettings.bin", std::ios::binary);
+	if (inFile.is_open())
+	{
+		inFile.read(reinterpret_cast<char*>(&m_PixelShaderConstantBufferData), sizeof(m_PixelShaderConstantBufferData));
+		inFile.close();
+	}
 }

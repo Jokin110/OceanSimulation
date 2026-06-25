@@ -24,6 +24,7 @@ public:
 
     static bool Initialize();
 	void Update();
+    void UpdateUI();
 
     float GetTime() const { return m_Time; }
 	float GetUnscaledTime() const { return m_UnscaledTime; }

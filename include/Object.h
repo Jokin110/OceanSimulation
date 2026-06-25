@@ -20,6 +20,7 @@ public:
 	virtual bool Initialize() = 0;
 	virtual void Start() = 0;
 	virtual void Update() = 0;
+	virtual void UpdateUI() = 0;
 
 	virtual bool IsInitialized() = 0;
 
@@ -83,6 +84,7 @@ public:
 	virtual bool Initialize();
 	virtual void Start();
 	virtual void Update();
+	virtual void UpdateUI();
 
 	bool IsInitialized() { return m_Initialized; }
 
@@ -301,22 +303,14 @@ bool Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBuffe
 	GenerateMesh();
 
 	ID3DBlob* vertexShaderBlob = nullptr;
-#if _DEBUG
 	m_d3dVertexShader = D3D11Application::GetInstance().CreateVertexShader(m_VertexShaderFile, vertexShaderBlob);
-#else
-	m_d3dVertexShader = D3D11Application::GetInstance().CreateVertexShader(L"../../" + m_VertexShaderFile, vertexShaderBlob);
-#endif
 
 	if (m_d3dVertexShader == nullptr)
 	{
 		return false;
 	}
 
-#if _DEBUG
 	m_d3dPixelShader = D3D11Application::GetInstance().CreatePixelShader(m_PixelShaderFile);
-#else
-	m_d3dPixelShader = D3D11Application::GetInstance().CreatePixelShader(L"../../" + m_PixelShaderFile);
-#endif
 
 	if (m_d3dPixelShader == nullptr)
 	{
@@ -326,11 +320,8 @@ bool Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBuffe
 
 	if (!m_HullShaderFile.empty())
 	{
-#if _DEBUG
 		m_d3dHullShader = D3D11Application::GetInstance().CreateHullShader(m_HullShaderFile);
-#else
-		m_d3dHullShader = D3D11Application::GetInstance().CreateHullShader(L"../../" + m_HullShaderFile);
-#endif
+
 		if (m_d3dHullShader == nullptr)
 		{
 			vertexShaderBlob->Release();
@@ -340,11 +331,8 @@ bool Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBuffe
 
 	if (!m_DomainShaderFile.empty())
 	{
-#if _DEBUG
 		m_d3dDomainShader = D3D11Application::GetInstance().CreateDomainShader(m_DomainShaderFile);
-#else
-		m_d3dDomainShader = D3D11Application::GetInstance().CreateDomainShader(L"../../" + m_DomainShaderFile);
-#endif
+
 		if (m_d3dDomainShader == nullptr)
 		{
 			vertexShaderBlob->Release();
@@ -505,6 +493,12 @@ void Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBuffe
 	if (m_d3dPixelShaderConstantBuffers != nullptr) D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(m_d3dPixelShaderConstantBuffers, 0, nullptr, &m_PixelShaderConstantBufferData, 0, 0);
 	if (m_d3dHullShaderConstantBuffers != nullptr) D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(m_d3dHullShaderConstantBuffers, 0, nullptr, &m_HullShaderConstantBufferData, 0, 0);
 	if (m_d3dDomainShaderConstantBuffers != nullptr) D3D11Application::GetInstance().GetDeviceContext()->UpdateSubresource(m_d3dDomainShaderConstantBuffers, 0, nullptr, &m_DomainShaderConstantBufferData, 0, 0);
+}
+
+template<typename VertexData, typename VertexShaderConstantBufferData, typename PixelShaderConstantBufferData, typename HullShaderConstantBufferData, typename DomainShaderConstantBufferData>
+void Object<VertexData, VertexShaderConstantBufferData, PixelShaderConstantBufferData, HullShaderConstantBufferData, DomainShaderConstantBufferData>::UpdateUI()
+{
+
 }
 
 template<typename VertexData, typename VertexShaderConstantBufferData, typename PixelShaderConstantBufferData, typename HullShaderConstantBufferData, typename DomainShaderConstantBufferData>

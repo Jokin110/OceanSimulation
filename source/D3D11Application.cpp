@@ -5,6 +5,7 @@
 #include <GLFW/glfw3native.h>
 
 #include <iostream>
+#include <comdef.h>
 
 #include "TimeManager.h"
 #include "ObjectManager.h"
@@ -14,6 +15,7 @@
 #include "InputManager.h"
 #include "OceanComputeManager.h"
 #include "FFTManager.h"
+#include "UIManager.h"
 
 using namespace DirectX;
 
@@ -26,8 +28,6 @@ D3D11Application::D3D11Application(const string& title)
 
 D3D11Application::~D3D11Application()
 {
-    CleanupImGui();
-
     ObjectManager::DestroyInstance();
 	PostprocessEffectManager::DestroyInstance();
     SceneManager::DestroyInstance();
@@ -36,6 +36,7 @@ D3D11Application::~D3D11Application()
     FFTManager::DestroyInstance();
     InputManager::DestroyInstance();
     TimeManager::DestroyInstance();
+    UIManager::DestroyInstance();
 
 	// Ensure all pointers are released
     if (m_d3dDeviceContext) m_d3dDeviceContext->ClearState();
@@ -221,11 +222,6 @@ bool D3D11Application::Initialize()
         return false;
     }
 
-    if (!InitializeImGui())
-    {
-        return false;
-    }
-
     return true;
 }
 
@@ -273,6 +269,11 @@ bool D3D11Application::InitializeManagers()
         return false;
     }
 
+    if (!UIManager::GetInstance().Initialize())
+    {
+        return false;
+    }
+
     if (!ObjectManager::GetInstance().InitializeObjects())
     {
         return false;
@@ -284,29 +285,6 @@ bool D3D11Application::InitializeManagers()
 	}
 
     return true;
-}
-
-bool D3D11Application::InitializeImGui()
-{
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-
-    ImGui::StyleColorsDark();
-
-    ImGui_ImplGlfw_InitForOther(GetWindow(), true);
-    ImGui_ImplDX11_Init(m_d3dDevice, m_d3dDeviceContext);
-
-    return true;
-}
-
-void D3D11Application::CleanupImGui()
-{
-    ImGui_ImplDX11_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
 }
 
 bool D3D11Application::CreateSwapchainResources()
@@ -521,16 +499,7 @@ void D3D11Application::OnResize(const int32_t width, const int32_t height)
 
 void D3D11Application::Update()
 {
-    WindowApplication::Update();
-
-    if (InputManager::GetInstance().GetKeyDown(GLFW_KEY_T))
-    {
-        m_GUIActive = !m_GUIActive;
-    }
-
-    ImGui_ImplDX11_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
+    WindowApplication::Update(); 
 
     UpdateManagers();
 }
@@ -544,6 +513,19 @@ void D3D11Application::UpdateManagers()
     CameraManager::GetInstance().Update();
 	ObjectManager::GetInstance().Update();
 	PostprocessEffectManager::GetInstance().Update();
+
+    UIManager::GetInstance().Update();
+}
+
+void D3D11Application::UpdateUI()
+{
+    InputManager::GetInstance().UpdateUI();
+    TimeManager::GetInstance().UpdateUI();
+    OceanComputeManager::GetInstance().UpdateUI();
+    SceneManager::GetInstance().UpdateUI();
+    CameraManager::GetInstance().UpdateUI();
+    ObjectManager::GetInstance().UpdateUI();
+    PostprocessEffectManager::GetInstance().UpdateUI();
 }
 
 void D3D11Application::Render()
@@ -663,12 +645,7 @@ void D3D11Application::Render()
 
     m_d3dDeviceContext->OMSetRenderTargets(1, &m_d3dRenderTargetView, nullptr);
 
-    ImGui::Render();
-
-    if (m_GUIActive)
-    {
-        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-    }
+    UIManager::GetInstance().Render();
 
     Present(false);
 }
@@ -681,7 +658,7 @@ bool D3D11Application::CompileShader(const wstring& fileName, const string& entr
     ID3DBlob* tempShaderBlob = nullptr;
     ID3DBlob* errorBlob = nullptr;
     
-    if (FAILED(D3DCompileFromFile(
+    HRESULT hr = D3DCompileFromFile(
         fileName.data(),
         nullptr,
         D3D_COMPILE_STANDARD_FILE_INCLUDE,
@@ -690,10 +667,17 @@ bool D3D11Application::CompileShader(const wstring& fileName, const string& entr
         compileFlags,
         0,
         &tempShaderBlob,
-        &errorBlob)))
+        &errorBlob);
+
+    if (FAILED(hr))
     {
+        wstring filename = fileName;
+
         cout << "D3D11: Failed to read shader from file\n";
-		cout << fileName.data() << "\n";
+		wcout << filename.data() << "\n";
+
+        _com_error err(hr);
+        std::wcout << L"Windows Error: " << err.ErrorMessage() << L"\n";
 
         if (errorBlob != nullptr)
         {

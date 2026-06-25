@@ -42,6 +42,12 @@ cbuffer RenderingValuesBuffer : register(b0)
     
     float m_FoamRoughnessMultiplier;
     int m_TextureResolution;
+    
+	float m_Cascade0FoamWeight;
+	float m_Cascade1FoamWeight;
+	float m_Cascade2FoamWeight;
+	float m_Cascade3FoamWeight;
+    
     float2 m_Padding;
 }
 
@@ -252,6 +258,9 @@ PSOutput Main(PSInput input)
     float2 totalSlope = float2(0.0f, 0.0f);
     float3 totalSecondOrderMoments = float3(0.0f, 0.0f, 0.0f);
     float totalFoam = 0.0f;
+    
+    float cascadeFoamWeights[4] = { m_Cascade0FoamWeight, m_Cascade1FoamWeight, m_Cascade2FoamWeight, m_Cascade3FoamWeight };
+    float totalWeight = 0.0f;
 
     for (int i = 0; i < CASCADE_COUNT; i++)
     {
@@ -288,15 +297,16 @@ PSOutput Main(PSInput input)
     
         totalSlope += slopeSample.xy;
         
-        totalFoam += slopeSample.a;
+        totalFoam += slopeSample.a * cascadeFoamWeights[i];
+        totalWeight += cascadeFoamWeights[i];
     }
 
     // Calculate final foam
-    float foam = saturate(totalFoam);
+    float foam = totalFoam / totalWeight;
     
     float3 foamColor = FoamTexture.Sample(LinearSampler, input.UVs[CASCADE_COUNT - 1]);
     
-    foam = saturate((foamColor.r + foamColor.g + foamColor.b) / 3.0f * foam);
+    foam = (foamColor.r + foamColor.g + foamColor.b) / 3.0f * foam;
    
     float baseVariance = 0.002f + foam * m_FoamRoughnessMultiplier;
     
@@ -336,7 +346,7 @@ PSOutput Main(PSInput input)
     
     float3 foamDiffuseColor = max(0.0f, dot(-lightDir, normal)) * foamColor;
     
-    float3 waterScatterFoamDiffuse = lerp(scatteredLight, foamDiffuseColor, foam);
+    float3 waterScatterFoamDiffuse = lerp(scatteredLight, foamDiffuseColor, saturate(foam));
     
     float3 ambientLight = m_AmbientLightIntensity * m_WaterScatterColor * m_LightColor;
     

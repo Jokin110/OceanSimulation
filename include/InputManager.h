@@ -1,5 +1,6 @@
 #pragma once
 #include <GLFW/glfw3.h>
+#include "imgui.h"
 
 class InputManager
 {
@@ -23,6 +24,7 @@ public:
 
     static bool Initialize();
     void Update();
+    void UpdateUI();
 
     bool GetKeyDown(int key);
     bool GetKey(int key);
@@ -33,5 +35,7 @@ private:
 
     bool m_currentKeys[GLFW_KEY_LAST + 1] = { false };
     bool m_previousKeys[GLFW_KEY_LAST + 1] = { false };
+
+    bool m_EnableInput = true;
 };
 

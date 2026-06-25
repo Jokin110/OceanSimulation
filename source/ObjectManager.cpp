@@ -66,3 +66,11 @@ void ObjectManager::Update()
 		m_Objects[i]->Update();
 	}
 }
+
+void ObjectManager::UpdateUI()
+{
+	for (int i = 0; i < m_Objects.size(); i++)
+	{
+		m_Objects[i]->UpdateUI();
+	}
+}

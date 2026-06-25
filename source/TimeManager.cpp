@@ -43,7 +43,10 @@ void TimeManager::Update()
 
 	m_Time += m_DeltaTime;
 	m_UnscaledTime += m_UnscaledDeltaTime;
+}
 
+void TimeManager::UpdateUI()
+{
 	ImGui::Begin("FPS");
 	float deltaTime = m_UnscaledDeltaTime > 0.0f ? m_UnscaledDeltaTime : 0.00001f; // Avoid division by zero
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", m_UnscaledDeltaTime * 1000.0f, 1.0f / deltaTime);

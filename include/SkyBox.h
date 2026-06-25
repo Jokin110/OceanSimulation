@@ -17,7 +17,8 @@ struct VertexDataSkyBox
 // Define the structure of the constant buffers for the vertex shader
 struct PerObjectVertexShaderConstantBufferDataSkyBox
 {
-	XMMATRIX m_WorldViewProjectionMatrix;
+	XMMATRIX m_WorldMatrix;
+	XMMATRIX m_ViewProjectionMatrix;
 };
 
 // Define the structure of the constant buffers for the hull shader
@@ -41,6 +42,12 @@ struct PerObjectPixelShaderConstantBufferDataSkyBox
 	float m_SunBias;
 };
 
+struct SkyBoxSettings
+{
+	int m_SelectedSkyboxIndex = 0;
+	float m_SkyboxYValue = 0.0f;
+};
+
 class SkyBox : public Object<VertexDataSkyBox, PerObjectVertexShaderConstantBufferDataSkyBox, PerObjectPixelShaderConstantBufferDataSkyBox, PerObjectHullShaderConstantBufferDataSkyBox, PerObjectDomainShaderConstantBufferDataSkyBox>
 {
 public:
@@ -50,10 +57,14 @@ public:
 	bool Initialize() override;
 	void Start() override;
 	void Update() override;
+	void UpdateUI() override;
 
 	ID3D11ShaderResourceView* const* GetPixelShaderSRVs() override;
 
 	ID3D11ShaderResourceView* const* GetSkyboxSRV() { return m_SkyBoxTexture->GetTextureSRVs(); }
+
+	void SaveSettings(string parentPath);
+	void LoadSettings(string parentPath);
 
 protected:
 	UINT GetVertexInputLayout(D3D11_INPUT_ELEMENT_DESC*& inputLayout) override;
@@ -66,8 +77,16 @@ private:
 
 	//string m_SkyBoxTextureFilePath[SKYBOX_TEXTURE_COUNT] = {"images/Daylight Box_Back.bmp", "images/Daylight Box_Front.bmp", "images/Daylight Box_Left.bmp", "images/Daylight Box_Right.bmp", "images/Daylight Box_Top.bmp", "images/Daylight Box_Bottom.bmp"};
 
-	string m_SkyBoxTextureFilePath = "images/skybox_raw.dds";
+	string m_SkyBoxTexturesPath = "images/skyboxes";
+	string m_FinalSkyBoxTexturePath;
+
+	vector<string> m_SkyboxFiles;
 
 	Texture2D* m_SkyBoxTexture = nullptr;
+
+	SkyBoxSettings m_SkyBoxSettings;
+
+	void LoadSkyboxes();
+	void ApplySkyboxChanges();
 };
 

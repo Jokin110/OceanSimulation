@@ -94,10 +94,6 @@ bool FFTManager::CreateComputeShaders()
 
     wstring path = m_FFTComputeShaderFile;
 
-#ifndef _DEBUG
-    path = L"../../" + path;
-#endif
-
     m_PrecomputeCS = app.CreateComputeShaderWithEntry(path, "PrecomputeTwiddleFactorsAndInputIndices");
     m_HorizontalStepFFTCS = app.CreateComputeShaderWithEntry(path, "HorizontalStepFFT");
     m_VerticalStepFFTCS = app.CreateComputeShaderWithEntry(path, "VerticalStepFFT");

@@ -53,12 +53,18 @@ bool WindowApplication::Initialize()
 
     GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
     const GLFWvidmode* videoMode = glfwGetVideoMode(primaryMonitor);
-    m_Width = static_cast<int32_t>(videoMode->width * 0.9f);
-    m_Height = static_cast<int32_t>(videoMode->height * 0.9f);
+    m_Width = static_cast<int32_t>(videoMode->width);
+    m_Height = static_cast<int32_t>(videoMode->height);
 
     glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_FALSE);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    m_Window = glfwCreateWindow(m_Width, m_Height, m_Title.data(), nullptr, nullptr);
+
+    glfwWindowHint(GLFW_RED_BITS, videoMode->redBits);
+    glfwWindowHint(GLFW_GREEN_BITS, videoMode->greenBits);
+    glfwWindowHint(GLFW_BLUE_BITS, videoMode->blueBits);
+    glfwWindowHint(GLFW_REFRESH_RATE, videoMode->refreshRate);
+
+    m_Window = glfwCreateWindow(m_Width, m_Height, m_Title.data(), primaryMonitor, nullptr);
 
     if (m_Window == nullptr)
     {
@@ -67,9 +73,9 @@ bool WindowApplication::Initialize()
         return false;
     }
 
-    const int32_t windowLeft = videoMode->width / 2 - m_Width / 2;
-    const int32_t windowTop = videoMode->height / 2 - m_Height / 2;
-    glfwSetWindowPos(m_Window, windowLeft, windowTop);
+    //const int32_t windowLeft = videoMode->width / 2 - m_Width / 2;
+    //const int32_t windowTop = videoMode->height / 2 - m_Height / 2;
+    //glfwSetWindowPos(m_Window, windowLeft, windowTop);
 
 	glfwSetWindowUserPointer(m_Window, this);
 	glfwSetFramebufferSizeCallback(m_Window, HandleResize);

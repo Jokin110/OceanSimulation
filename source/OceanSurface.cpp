@@ -2,7 +2,6 @@
 #include "CameraManager.h"
 #include "OceanComputeManager.h"
 #include "SceneManager.h"
-#include "imgui.h"
 #include <fstream>
 
 #define MAX_OCEAN_PATCH_SIDE_VERTICES 512
@@ -99,11 +98,6 @@ void OceanSurface::Start()
 
 void OceanSurface::Update()
 {
-	for (int i = 0; i < CASCADE_COUNT; i++)
-	{
-		m_PixelShaderSRVs[i] = OceanComputeManager::GetInstance().GetSlopeSRV()[i];
-	}
-
 	XMMATRIX scaleMatrix = XMMatrixScaling(m_Scale.x, m_Scale.y, m_Scale.z);
 	XMMATRIX rotationMatrix = XMMatrixRotationRollPitchYaw(XMConvertToRadians(m_Rotation.x), XMConvertToRadians(m_Rotation.y), XMConvertToRadians(m_Rotation.z));
 	XMMATRIX translationMatrix = XMMatrixTranslation(m_Position.x, m_Position.y, m_Position.z);
@@ -130,6 +124,11 @@ void OceanSurface::Update()
 	Object::Update();
 }
 
+void OceanSurface::UpdateUI()
+{
+
+}
+
 ID3D11ShaderResourceView* const* OceanSurface::GetDomainShaderSRVs()
 {
 	return OceanComputeManager::GetInstance().GetDisplacementSRV();
@@ -137,6 +136,18 @@ ID3D11ShaderResourceView* const* OceanSurface::GetDomainShaderSRVs()
 
 ID3D11ShaderResourceView* const* OceanSurface::GetPixelShaderSRVs()
 {
+	for (int i = 0; i < CASCADE_COUNT; i++)
+	{
+		m_PixelShaderSRVs[i] = OceanComputeManager::GetInstance().GetSlopeSRV()[i];
+	}
+
+	for (int i = 0; i < CASCADE_COUNT; i++)
+	{
+		m_PixelShaderSRVs[i + CASCADE_COUNT] = OceanComputeManager::GetInstance().GetSecondOrderMomentsSRV()[i];
+	}
+
+	m_PixelShaderSRVs[2 * CASCADE_COUNT] = SceneManager::GetInstance().GetSkyboxSRV()[0];
+
 	return m_PixelShaderSRVs;
 }
 

@@ -106,8 +106,6 @@ void CameraManager::Update()
 
     m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPosition, upDirection);
     m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(45.0f), static_cast<float>(D3D11Application::GetInstance().GetWindowWidth()) / static_cast<float>(D3D11Application::GetInstance().GetWindowHeight()), m_CameraSettings.m_NearClipPlaneDistance, m_CameraSettings.m_FarClipPlaneDistance);
-
-    UpdateUI();
 }
 
 void CameraManager::UpdateUI()
@@ -130,31 +128,45 @@ void CameraManager::UpdateUI()
         m_CameraSettings.m_FocusPoint = m_CameraFocusPoint;
         m_CameraSettings.m_Speed = m_Speed;
 
-        std::ofstream outFile("CameraSettings.bin", std::ios::binary);
-        if (outFile.is_open())
-        {
-            outFile.write(reinterpret_cast<const char*>(&m_CameraSettings), sizeof(m_CameraSettings));
-            outFile.close();
-        }
+        SaveSettings();
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button("Load Settings"))
     {
-        std::ifstream inFile("CameraSettings.bin", std::ios::binary);
-        if (inFile.is_open())
-        {
-            inFile.read(reinterpret_cast<char*>(&m_CameraSettings), sizeof(m_CameraSettings));
-            inFile.close();
-
-            m_CameraPosition = m_CameraSettings.m_Position;
-            m_CameraFocusPoint = m_CameraSettings.m_FocusPoint;
-            m_Speed = m_CameraSettings.m_Speed;
-			m_CameraSettings.m_NearClipPlaneDistance = min(max(m_CameraSettings.m_NearClipPlaneDistance, MIN_NEAR_CLIP_PLANE_DISTANCE), MAX_FAR_CLIP_PLANE_DISTANCE - MIN_NEAR_CLIP_PLANE_DISTANCE);
-            m_CameraSettings.m_FarClipPlaneDistance = min(max(m_CameraSettings.m_FarClipPlaneDistance, m_CameraSettings.m_NearClipPlaneDistance + MIN_NEAR_CLIP_PLANE_DISTANCE), MAX_FAR_CLIP_PLANE_DISTANCE);
-        }
+        LoadSettings();
     }
 
     ImGui::End();
+}
+
+void CameraManager::SaveSettings(string parentPath)
+{
+    m_CameraSettings.m_Position = m_CameraPosition;
+    m_CameraSettings.m_FocusPoint = m_CameraFocusPoint;
+    m_CameraSettings.m_Speed = m_Speed;
+
+    std::ofstream outFile(parentPath + "CameraSettings.bin", std::ios::binary);
+    if (outFile.is_open())
+    {
+        outFile.write(reinterpret_cast<const char*>(&m_CameraSettings), sizeof(m_CameraSettings));
+        outFile.close();
+    }
+}
+
+void CameraManager::LoadSettings(string parentPath)
+{
+    std::ifstream inFile(parentPath + "CameraSettings.bin", std::ios::binary);
+    if (inFile.is_open())
+    {
+        inFile.read(reinterpret_cast<char*>(&m_CameraSettings), sizeof(m_CameraSettings));
+        inFile.close();
+
+        m_CameraPosition = m_CameraSettings.m_Position;
+        m_CameraFocusPoint = m_CameraSettings.m_FocusPoint;
+        m_Speed = m_CameraSettings.m_Speed;
+        m_CameraSettings.m_NearClipPlaneDistance = min(max(m_CameraSettings.m_NearClipPlaneDistance, MIN_NEAR_CLIP_PLANE_DISTANCE), MAX_FAR_CLIP_PLANE_DISTANCE - MIN_NEAR_CLIP_PLANE_DISTANCE);
+        m_CameraSettings.m_FarClipPlaneDistance = min(max(m_CameraSettings.m_FarClipPlaneDistance, m_CameraSettings.m_NearClipPlaneDistance + MIN_NEAR_CLIP_PLANE_DISTANCE), MAX_FAR_CLIP_PLANE_DISTANCE);
+    }
 }
