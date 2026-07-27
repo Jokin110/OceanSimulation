@@ -18,24 +18,25 @@ Grounded in Jerry Tessendorf's spectral wave methods and the JONSWAP oceanograph
 
 <p align="center">
   <a href="videosAndScreenshots/CalmSunset.png" target="_blank">
-    <img src="videosAndScreenshots/CalmSunset.png" alt="Calm sunset over the water" width="32%" />
+    <img src="videosAndScreenshots/CalmSunset.png" alt="Calm sunset over the water" width="49%" />
   </a>
   <a href="videosAndScreenshots/CalmDay.png" target="_blank">
-    <img src="videosAndScreenshots/CalmDay.png" alt="Ocean on a calm day" width="32%" />
+    <img src="videosAndScreenshots/CalmDay.png" alt="Ocean on a calm day" width="49%" />
   </a>
+<p align="center">
   <a href="videosAndScreenshots/NightMoonlight.png" target="_blank">
-    <img src="videosAndScreenshots/NightMoonlight.png" alt="Ocean surface illuminated by night moonlight" width="32%" />
+    <img src="videosAndScreenshots/NightMoonlight.png" alt="Ocean surface illuminated by night moonlight" width="49%" />
+  </a>
+  <a href="videosAndScreenshots/MildStorm.png" target="_blank">
+    <img src="videosAndScreenshots/MildStorm.png" alt="Ocean during a mild storm" width="49%" />
   </a>
 </p>
 <p align="center">
-  <a href="videosAndScreenshots/MildStorm.png" target="_blank">
-    <img src="videosAndScreenshots/MildStorm.png" alt="Ocean during a mild storm" width="32%" />
-  </a>
   <a href="videosAndScreenshots/Storm.png" target="_blank">
-    <img src="videosAndScreenshots/Storm.png" alt="Turbulent ocean during a storm" width="32%" />
+    <img src="videosAndScreenshots/Storm.png" alt="Turbulent ocean during a storm" width="49%" />
   </a>
   <a href="videosAndScreenshots/FinalRenderVariant.png" target="_blank">
-    <img src="videosAndScreenshots/FinalRenderVariant.png" alt="Dense volumetric fog settling over the ocean surface" width="32%" />
+    <img src="videosAndScreenshots/FinalRenderVariant.png" alt="Dense volumetric fog settling over the ocean surface" width="49%" />
   </a>
 </p>
 
