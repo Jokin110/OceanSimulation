@@ -14,7 +14,7 @@ Grounded in Jerry Tessendorf's spectral wave methods and the JONSWAP oceanograph
 ---
 
 ## 🎥 Visual Showcase
-<video src="videosAndScreenshots/oceanSimulation.mp4" autoplay loop muted playsinline style="max-height:640px; width:100%;"></video>
+<video src="https://github.com/user-attachments/assets/645a1835-c388-4fa5-9f43-46a1e3b4481d" autoplay loop muted playsinline style="max-height:640px; width:100%;"></video>
 
 <p align="center">
   <a href="videosAndScreenshots/CalmSunset.png" target="_blank">
